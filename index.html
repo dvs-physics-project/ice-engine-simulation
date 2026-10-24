@@ -1,0 +1,601 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Анатомия ДВС</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Extra+Condensed:ital,wght@0,500;0,600;1,500;1,600&family=Fira+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a main menu and three engine tabs. Each engine is a living assembly drawing — the 3D
+   stage is the drawing sheet (format frame, leader callouts, title block), the right column is
+   the specification + instrument readouts. Light = blue ink on drafting paper; dark = blueprint. */
+:root {
+  --paper: #f3f5f8;
+  --sheet: #fbfcfd;
+  --ink: #1d2c8a;
+  --text: #1a2032;
+  --muted: #5a6480;
+  --rule: #d3d9e7;
+  --rule-strong: #95a1c3;
+  --grid: rgba(29, 44, 138, 0.045);
+  --accent: #cf4413;
+  --accent-soft: rgba(207, 68, 19, 0.1);
+  --on-ink: #fbfcfd;
+  --intake: #1f74cf;
+  --compression: #7550d4;
+  --power: #dd4d1c;
+  --exhaust: #6e7687;
+  --font-display: 'Fira Sans Extra Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --font-body: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  --bar-h: 52px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0b1322; --sheet: #0f192d; --ink: #a8c1ff; --text: #dde5f5; --muted: #8b98b6;
+    --rule: #22304d; --rule-strong: #3d5180; --grid: rgba(168, 193, 255, 0.05);
+    --accent: #ff8a3d; --accent-soft: rgba(255, 138, 61, 0.14); --on-ink: #0b1322;
+    --intake: #57a9ff; --compression: #a78cff; --power: #ff6b3b; --exhaust: #8e97ab;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0b1322; --sheet: #0f192d; --ink: #a8c1ff; --text: #dde5f5; --muted: #8b98b6;
+  --rule: #22304d; --rule-strong: #3d5180; --grid: rgba(168, 193, 255, 0.05);
+  --accent: #ff8a3d; --accent-soft: rgba(255, 138, 61, 0.14); --on-ink: #0b1322;
+  --intake: #57a9ff; --compression: #a78cff; --power: #ff6b3b; --exhaust: #8e97ab;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.paper { background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px; }
+
+/* ------------------------------------------------ shell: top bar with the tabs ---------- */
+.shell { display: flex; flex-direction: column; height: 100%; }
+.topbar { flex: 0 0 var(--bar-h); display: flex; align-items: stretch; gap: 4px; padding: 0 14px 0 8px; background: var(--sheet); border-bottom: 1.5px solid var(--ink); position: relative; z-index: 3; }
+.home { display: inline-flex; align-items: center; gap: 9px; border: 0; background: transparent; color: var(--ink); padding: 0 14px 0 8px; cursor: pointer;
+  font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 19px; white-space: nowrap; border-right: 1px solid var(--rule); }
+.home svg { width: 22px; height: 22px; flex: none; }
+.home[aria-current="page"] { color: var(--accent); }
+.home:hover { background: var(--accent-soft); }
+.tabs { display: flex; align-items: stretch; gap: 2px; min-width: 0; }
+.tabs [role="tab"] { display: inline-flex; align-items: center; gap: 9px; border: 0; background: transparent; padding: 0 14px; cursor: pointer; position: relative; white-space: nowrap;
+  font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--muted); }
+.tabs [role="tab"] svg { width: 30px; height: 20px; flex: none; color: currentColor; }
+.tabs [role="tab"]:hover { color: var(--ink); background: var(--accent-soft); }
+.tabs [role="tab"][aria-selected="true"] { color: var(--ink); font-weight: 600; }
+.tabs [role="tab"][aria-selected="true"]::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1.5px; height: 3px; border-radius: 2px 2px 0 0; background: var(--accent); }
+.bar-note { margin-left: auto; align-self: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+/* ------------------------------------------------ main menu ---------- */
+.menu { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.menu-inner { max-width: 1140px; margin: 0 auto; padding: 26px 24px 36px; display: grid; gap: 20px; }
+.menu-head { position: relative; background: var(--sheet); border: 1.5px solid var(--ink); padding: 18px 24px 20px; display: grid; gap: 9px; }
+.eyebrow { margin: 0; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.menu h1 { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: clamp(30px, 4.2vw, 46px); line-height: 1.04; color: var(--ink); text-wrap: balance; }
+.lead { margin: 0; max-width: 66ch; font-size: 15.5px; color: var(--text); text-wrap: pretty; }
+.features { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.features span { border: 1px solid var(--rule-strong); border-radius: 999px; padding: 3px 11px; font-family: var(--font-display); font-size: 14.5px; color: var(--ink); background: var(--paper); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.card { background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 4px; display: grid; grid-template-rows: auto 1fr; cursor: pointer; overflow: hidden;
+  transition: box-shadow 0.18s ease, transform 0.18s ease; }
+.card:hover { box-shadow: 0 12px 30px rgba(10, 20, 60, 0.15); transform: translateY(-2px); }
+.card .art { color: var(--ink); border-bottom: 1px solid var(--ink); padding: 14px 16px 10px; }
+.card svg.schem { display: block; width: 100%; height: auto; max-height: 210px; }
+.schem .ln { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+.schem .cut, .schem .cut.ln { fill: url(#hatch); }
+.schem .thin { fill: none; stroke: currentColor; stroke-width: 0.8; }
+.schem .axis { fill: none; stroke: currentColor; stroke-width: 0.7; stroke-dasharray: 10 3 2 3; opacity: 0.7; }
+.schem .bore { fill: var(--paper); stroke: currentColor; stroke-width: 1.2; }
+.schem .pis { fill: var(--sheet); stroke: currentColor; stroke-width: 1.3; }
+.schem .hot { fill: var(--accent); fill-opacity: 0.22; stroke: none; }
+.schem .solid { fill: currentColor; }
+.schem text { font-family: var(--font-display); font-style: italic; font-size: 13px; fill: currentColor; }
+.card-body { padding: 14px 20px 18px; display: grid; gap: 10px; align-content: start; }
+.card-body .eyebrow { font-size: 11.5px; }
+.card h2 { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 27px; line-height: 1.1; color: var(--ink); }
+.card p.desc { margin: 0; color: var(--text); text-wrap: pretty; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 16px; margin: 2px 0 4px; }
+.facts div { border-top: 1px solid var(--rule); padding-top: 4px; min-width: 0; }
+.facts dt { font-size: 12px; color: var(--muted); }
+.facts dd { margin: 0; font-family: var(--font-mono); font-size: 13.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.open { justify-self: start; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--ink); background: var(--ink); color: var(--on-ink); border-radius: 6px;
+  padding: 8px 16px; font-family: var(--font-display); font-size: 17px; font-weight: 600; cursor: pointer; }
+.card:hover .open { background: var(--accent); border-color: var(--accent); }
+.menu-foot { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+/* ------------------------------------------------ engine view ---------- */
+.app { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 392px; }
+
+/* stage (drawing sheet) */
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px; }
+.viewport { position: absolute; inset: 0; }
+.viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.frame { position: absolute; inset: 8px 8px 8px 26px; border: 1.5px solid var(--ink); opacity: 0.55; pointer-events: none; }
+.callouts { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.callouts line { stroke: var(--ink); stroke-width: 0.9; }
+.callouts circle { fill: var(--ink); }
+.callouts g.co { pointer-events: auto; cursor: pointer; }
+.callouts g.co text { font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 15px; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.callouts g.co .hit { fill: transparent; }
+.callouts g.co.on line, .callouts g.co:hover line { stroke: var(--accent); stroke-width: 1.4; }
+.callouts g.co.on text, .callouts g.co:hover text { fill: var(--accent); }
+.callouts g.co.on circle, .callouts g.co:hover circle { fill: var(--accent); }
+
+.stage-top { position: absolute; top: 16px; left: 38px; right: 18px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
+.stage-top > * { pointer-events: auto; }
+.brand { font-family: var(--font-display); font-style: italic; color: var(--ink); line-height: 1.1; text-shadow: 0 0 2px var(--paper), 0 0 5px var(--paper), 0 0 9px var(--paper); }
+.brand b { display: block; font-size: 22px; font-weight: 600; letter-spacing: 0.01em; }
+.brand span { font-size: 13px; color: var(--muted); font-style: normal; font-family: var(--font-mono); letter-spacing: 0.02em; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 6px; overflow: hidden; background: var(--sheet); }
+.seg button { border: 0; background: transparent; padding: 5px 10px; font-family: var(--font-display); font-size: 14px; font-weight: 500; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+.seg button:hover:not([aria-pressed="true"]) { background: var(--accent-soft); }
+.chip { border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); color: var(--ink); padding: 5px 10px; font-family: var(--font-display); font-size: 14px; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+
+.transport { position: absolute; left: 38px; right: 18px; bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; pointer-events: none; }
+.transport > * { pointer-events: auto; }
+.tbtn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--sheet); color: var(--ink); display: grid; place-items: center; cursor: pointer; font-size: 13px; font-family: var(--font-mono); }
+.tbtn.play { width: 44px; height: 44px; background: var(--ink); color: var(--on-ink); font-size: 16px; }
+.scrub { flex: 1 1 220px; min-width: 180px; display: grid; gap: 2px; }
+.scrub-head { display: flex; justify-content: space-between; font-family: var(--font-display); font-style: italic; color: var(--ink); font-size: 14px; text-shadow: 0 0 2px var(--paper), 0 0 5px var(--paper); }
+.scrub-head output { font-family: var(--font-mono); font-style: normal; font-variant-numeric: tabular-nums; }
+.ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); padding: 0 2px; text-shadow: 0 0 2px var(--paper), 0 0 5px var(--paper); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.firing { display: flex; gap: 4px; }
+.firing button { border: 1px solid var(--rule-strong); background: var(--sheet); border-radius: 5px; padding: 3px 7px 4px; min-width: 60px; text-align: left; cursor: pointer; display: grid; line-height: 1.15; }
+.firing button b { font-family: var(--font-display); font-style: italic; font-weight: 600; color: var(--ink); font-size: 13px; }
+.firing button span { font-size: 11px; color: var(--muted); }
+.firing button i { display: block; height: 3px; border-radius: 2px; margin-top: 3px; background: var(--exhaust); }
+.firing button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.firing.compact { gap: 3px; }
+.firing.compact button { min-width: 34px; padding: 3px 5px 4px; text-align: center; }
+.firing.compact button b { font-size: 14px; }
+.firing.compact button span { display: none; }
+
+.stamp { position: absolute; right: 8px; bottom: 8px; border-collapse: collapse; background: var(--sheet); font-family: var(--font-display); font-style: italic; color: var(--ink); font-size: 11.5px; pointer-events: none; }
+.stamp td { border: 1px solid var(--ink); padding: 2px 6px; white-space: nowrap; }
+.stamp .big { font-size: 14px; font-weight: 600; line-height: 1.15; }
+.stamp .code { font-family: var(--font-mono); font-style: normal; font-size: 11.5px; }
+
+.part-card { position: absolute; left: 38px; bottom: 82px; width: min(360px, calc(100% - 56px)); background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 8px; padding: 12px 14px 12px; box-shadow: 0 10px 30px rgba(10, 20, 60, 0.16); }
+.part-card .pc-head { display: flex; align-items: baseline; gap: 10px; }
+.part-card .pc-pos { font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 28px; color: var(--accent); line-height: 1; min-width: 2ch; }
+.part-card h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 19px; color: var(--ink); text-wrap: balance; }
+.part-card .pc-qty { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+.part-card p { margin: 6px 0 10px; color: var(--text); }
+.part-card .pc-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.part-card .close { position: absolute; top: 6px; right: 8px; border: 0; background: transparent; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--on-ink); font-family: var(--font-display); font-size: 14px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; transform: translate(12px, -130%); }
+.tip b { font-weight: 600; font-style: italic; margin-right: 6px; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-style: italic; color: var(--ink); font-size: 18px; }
+
+/* sheet (right column) */
+.sheet { min-width: 0; overflow-y: auto; background: var(--sheet); border-left: 1.5px solid var(--ink); padding-inline: 18px; padding-block: 16px 24px; display: flex; flex-direction: column; gap: 18px; }
+.sheet section { display: grid; gap: 10px; }
+.sheet h2 { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 17px; color: var(--ink); border-bottom: 1px solid var(--ink); padding-bottom: 3px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sheet h2 small { font-family: var(--font-mono); font-style: normal; font-weight: 400; font-size: 11px; color: var(--muted); }
+.spec-line { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.spec-line b { color: var(--text); font-weight: 600; }
+.readout { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.readout label { font-family: var(--font-display); font-size: 15px; color: var(--ink); }
+.big-num { font-family: var(--font-mono); font-weight: 600; font-size: 26px; font-variant-numeric: tabular-nums; color: var(--text); }
+.big-num small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.stat { display: grid; border-top: 1px solid var(--rule); padding-top: 4px; }
+.stat .v { font-family: var(--font-mono); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .u { font-size: 12px; color: var(--muted); }
+.stroke-pill { display: inline-flex; align-items: center; gap: 8px; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--exhaust); font-family: var(--font-display); font-weight: 600; font-size: 15px; justify-self: start; }
+.stroke-pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--exhaust); }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+canvas.chart { width: 100%; height: auto; display: block; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.spec { width: 100%; border-collapse: collapse; font-size: 13px; }
+.spec th { font-family: var(--font-display); font-style: italic; font-weight: 500; color: var(--ink); text-align: left; border-bottom: 1px solid var(--ink); padding: 3px 4px; }
+.spec td { border-bottom: 1px solid var(--rule); padding: 4px 4px; vertical-align: top; }
+.spec td.pos { font-family: var(--font-display); font-style: italic; font-weight: 600; color: var(--ink); width: 46px; }
+.spec td.qty { text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; width: 64px; }
+.spec tr.group td { text-align: center; font-family: var(--font-display); font-style: italic; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; border-bottom: 0; padding-top: 10px; }
+.spec tr.row { cursor: pointer; }
+.spec tr.row:hover td { background: var(--accent-soft); }
+.spec tr.row.on td { background: var(--accent-soft); }
+.spec tr.row.on td.pos { color: var(--accent); }
+.spec tr.row.off td { opacity: 0.45; }
+
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+.checks label { display: flex; gap: 8px; align-items: center; cursor: pointer; font-size: 13.5px; }
+.checks input { accent-color: var(--ink); width: 16px; height: 16px; flex: none; }
+.row2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.sheet footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; }
+
+@media (min-width: 1400px) { .transport { right: 322px; } }
+@media (max-width: 1399px) { .stamp { display: none; } }
+@media (max-width: 980px) {
+  .shell { height: auto; min-height: 100%; }
+  .topbar { position: sticky; top: env(safe-area-inset-top, 0px); }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
+  .stage { height: 68vh; min-height: 420px; }
+  .sheet { border-left: 0; border-top: 1.5px solid var(--ink); overflow: visible; }
+  .frame { inset: 6px 6px 6px 14px; }
+  .stage-top { left: 22px; right: 16px; top: 12px; }
+  .transport { left: 22px; right: 16px; bottom: 12px; }
+  .part-card { left: 22px; bottom: 132px; }
+  .bar-note { display: none; }
+  .menu { overflow: visible; }
+}
+@media (max-width: 1020px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cards > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .menu-inner { padding: 20px 16px 28px; gap: 18px; }
+  .menu-head { padding: 18px 18px; }
+}
+@media (max-width: 560px) {
+  .topbar { padding: 0 10px 0 8px; }
+  .home { padding: 0 8px; }
+  .home span { display: none; }
+  .tabs [role="tab"] { padding: 0 9px; font-size: 15.5px; gap: 6px; }
+  .tabs [role="tab"] svg { display: none; }
+  .brand b { font-size: 18px; }
+  .stage-top { right: 16px; }
+  .tools { width: 100%; justify-content: flex-start; }
+  .tools .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .tools .seg::-webkit-scrollbar { display: none; }
+  .firing button { min-width: 52px; }
+  .firing button span { display: none; }
+  .firing.compact button { min-width: 30px; padding: 2px 4px 3px; }
+  .tools .seg button { padding: 5px 7px; font-size: 13px; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } .card, .card:hover { transition: none; transform: none; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute;color:var(--ink)" aria-hidden="true" focusable="false">
+  <defs>
+    <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="3.5" y1="0" x2="3.5" y2="7" stroke="currentColor" stroke-width="0.9"></line>
+    </pattern>
+  </defs>
+</svg>
+
+<div class="shell">
+  <header class="topbar">
+    <button type="button" class="home" data-tab="menu" aria-label="Главное меню">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="1"></rect><path d="M3.5 15.5h17M12 15.5v5M7 7.5h6M7 10.5h10"></path>
+      </svg>
+      <span>Анатомия ДВС</span>
+    </button>
+    <div class="tabs" role="tablist" aria-label="Двигатель">
+      <button type="button" role="tab" data-tab="i4" aria-selected="false" aria-controls="panel-i4">
+        <svg viewBox="0 0 30 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="5" width="5" height="10" rx="1"></rect><rect x="9" y="5" width="5" height="10" rx="1"></rect><rect x="16" y="5" width="5" height="10" rx="1"></rect><rect x="23" y="5" width="5" height="10" rx="1"></rect></svg>
+        <span>Рядный</span>
+      </button>
+      <button type="button" role="tab" data-tab="v8" aria-selected="false" aria-controls="panel-v8">
+        <svg viewBox="0 0 30 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="2" width="5.5" height="11" rx="1" transform="rotate(-38 5.75 7.5)"></rect><rect x="21.5" y="2" width="5.5" height="11" rx="1" transform="rotate(38 24.25 7.5)"></rect><circle cx="15" cy="15" r="3.2"></circle><path d="M8.5 11.5 13 14M21.5 11.5 17 14"></path></svg>
+        <span>V-образный</span>
+      </button>
+      <button type="button" role="tab" data-tab="b4" aria-selected="false" aria-controls="panel-b4">
+        <svg viewBox="0 0 30 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="6" width="9" height="8" rx="1"></rect><rect x="19.5" y="6" width="9" height="8" rx="1"></rect><circle cx="15" cy="10" r="3"></circle><path d="M10.5 10H12M18 10H19.5"></path></svg>
+        <span>Оппозитный</span>
+      </button>
+    </div>
+    <span class="bar-note">3D-модели по сборочным чертежам</span>
+  </header>
+
+  <section class="menu paper" data-panel="menu" aria-labelledby="menuTitle">
+    <div class="menu-inner">
+      <header class="menu-head">
+        <p class="eyebrow">Главное меню</p>
+        <h1 id="menuTitle">Анатомия двигателя внутреннего сгорания</h1>
+        <p class="lead">Три интерактивные модели, собранные по сборочным чертежам. Каждая деталь построена по размерам чертежа, а движение рассчитано точно: поршни, клапаны, шестерни и ремни подчиняются одним и тем же формулам и всегда синхронны. Выберите двигатель — вкладки сверху переключают их в любой момент.</p>
+        <div class="features" aria-label="Что есть в каждой модели">
+          <span>Точная кинематика</span><span>Разрезы корпуса</span><span>Выноски и спецификация</span><span>Фазы и индикаторная диаграмма</span><span>Газы и потоки</span>
+        </div>
+      </header>
+
+      <div class="cards">
+        <article class="card" data-tab="i4" aria-labelledby="cardI4">
+          <div class="art paper">
+            <svg class="schem" viewBox="0 0 360 214" role="img" aria-label="Схема рядного четырёхцилиндрового двигателя, продольный разрез">
+              <!-- longitudinal section: head with the camshafts, four bores; crank throws 1 & 4 up, 2 & 3 down -->
+              <path class="axis" d="M18 176H342"></path>
+              <g class="axis"><path d="M79 14V208"></path><path d="M145 14V208"></path><path d="M211 14V208"></path><path d="M277 14V208"></path></g>
+              <path class="cut ln" d="M40 34Q40 20 54 20H306Q320 20 320 34V40H40Z"></path>
+              <rect class="pis" x="50" y="26" width="260" height="8" rx="4"></rect>
+              <g class="ln"><ellipse cx="67" cy="30" rx="4" ry="6"></ellipse><ellipse cx="91" cy="30" rx="4" ry="6"></ellipse><ellipse cx="133" cy="30" rx="4" ry="6"></ellipse><ellipse cx="157" cy="30" rx="4" ry="6"></ellipse>
+                <ellipse cx="199" cy="30" rx="4" ry="6"></ellipse><ellipse cx="223" cy="30" rx="4" ry="6"></ellipse><ellipse cx="265" cy="30" rx="4" ry="6"></ellipse><ellipse cx="289" cy="30" rx="4" ry="6"></ellipse></g>
+              <rect class="cut ln" x="40" y="40" width="280" height="18"></rect>
+              <path class="cut ln" d="M40 58H320V150H40Z"></path>
+              <g class="bore"><rect x="55" y="58" width="48" height="88"></rect><rect x="121" y="58" width="48" height="88"></rect><rect x="187" y="58" width="48" height="88"></rect><rect x="253" y="58" width="48" height="88"></rect></g>
+              <rect class="hot" x="57" y="58" width="44" height="4"></rect><rect class="hot" x="255" y="58" width="44" height="4"></rect>
+              <rect class="pis" x="57" y="62" width="44" height="30" rx="1.5"></rect><rect class="pis" x="255" y="62" width="44" height="30" rx="1.5"></rect>
+              <rect class="pis" x="123" y="102" width="44" height="30" rx="1.5"></rect><rect class="pis" x="189" y="102" width="44" height="30" rx="1.5"></rect>
+              <path class="thin" d="M57 67H101M57 71H101M255 67H299M255 71H299M123 107H167M123 111H167M189 107H233M189 111H233"></path>
+              <path class="ln" d="M79 82V156M277 82V156M145 122V196M211 122V196"></path>
+              <circle class="solid" cx="79" cy="82" r="3"></circle><circle class="solid" cx="277" cy="82" r="3"></circle>
+              <circle class="solid" cx="145" cy="122" r="3"></circle><circle class="solid" cx="211" cy="122" r="3"></circle>
+              <path class="ln" d="M320 150V164Q320 202 296 206H64Q40 202 40 164V150"></path>
+              <path class="ln" d="M40 176H62V168H70V156H88V168H96V176H128V184H136V196H154V184H162V176H194V184H202V196H220V184H228V176H260V168H268V156H286V168H294V176H320"></path>
+              <g text-anchor="middle"><text x="79" y="13">1</text><text x="145" y="13">2</text><text x="211" y="13">3</text><text x="277" y="13">4</text></g>
+            </svg>
+          </div>
+          <div class="card-body">
+            <p class="eyebrow">КП.2011.00.00.00.СБ</p>
+            <h2 id="cardI4">4-цилиндровый рядный</h2>
+            <p class="desc">Бензиновый: два распредвала в головке, 16 клапанов, зубчатый ремень ГРМ с натяжителем, масляный насос на носке коленвала.</p>
+            <dl class="facts">
+              <div><dt>Цилиндр × ход</dt><dd>Ø72 × 69 мм</dd></div><div><dt>Рабочий объём</dt><dd>1124 см³</dd></div>
+              <div><dt>Порядок работы</dt><dd>1-3-4-2</dd></div><div><dt>Позиций на чертеже</dt><dd>27</dd></div>
+            </dl>
+            <button type="button" class="open">Открыть модель <span aria-hidden="true">→</span></button>
+          </div>
+        </article>
+
+        <article class="card" data-tab="v8" aria-labelledby="cardV8">
+          <div class="art paper">
+            <svg class="schem" viewBox="0 0 360 214" role="img" aria-label="Схема V-образного восьмицилиндрового двигателя, поперечный разрез">
+              <!-- cross-section from the fan end: banks at 90°, two rods on one crank pin, camshaft and pump in the vee -->
+              <path class="axis" d="M180 6V210"></path>
+              <g class="axis"><path d="M180 152L64 36"></path><path d="M180 152L296 36"></path></g>
+              <g transform="rotate(-45 180 152)">
+                <path class="cut ln" d="M146 110V46H214V110Z"></path>
+                <rect class="bore" x="154" y="50" width="52" height="60"></rect>
+                <rect class="hot" x="156" y="50" width="48" height="6"></rect>
+                <rect class="pis" x="156" y="56" width="48" height="28" rx="1.5"></rect>
+                <path class="thin" d="M156 61H204M156 65H204"></path>
+                <path class="cut ln" d="M144 46V26H216V46Z"></path>
+                <path class="ln" d="M150 26Q150 12 164 12H200Q210 12 210 22V26"></path>
+                <circle class="solid" cx="180" cy="74" r="3"></circle>
+              </g>
+              <g transform="rotate(45 180 152)">
+                <path class="cut ln" d="M146 110V46H214V110Z"></path>
+                <rect class="bore" x="154" y="50" width="52" height="60"></rect>
+                <rect class="pis" x="156" y="75" width="48" height="28" rx="1.5"></rect>
+                <path class="thin" d="M156 80H204M156 84H204"></path>
+                <path class="cut ln" d="M144 46V26H216V46Z"></path>
+                <path class="ln" d="M150 26Q150 12 164 12H200Q210 12 210 22V26"></path>
+                <circle class="solid" cx="180" cy="93" r="3"></circle>
+              </g>
+              <path class="ln" d="M126.3 146.3L121 168H239L233.7 146.3"></path>
+              <path class="ln" d="M121 168V190Q121 204 135 204H225Q239 204 239 190V168"></path>
+              <circle class="thin" cx="180" cy="152" r="17"></circle>
+              <path class="cut ln" d="M180 152L203.9 154.1A24 24 0 0 1 182.1 175.9Z"></path>
+              <path class="ln" d="M168 140L124.9 96.9M168 140L221.4 110.6"></path>
+              <circle class="pis" cx="168" cy="140" r="5"></circle>
+              <circle class="solid" cx="180" cy="152" r="3"></circle>
+              <circle class="pis" cx="180" cy="118" r="8"></circle><circle class="solid" cx="180" cy="118" r="2"></circle>
+              <path class="cut ln" d="M166 90L172 76H188L194 90Z"></path>
+              <text x="46" y="140" text-anchor="middle">1–4</text><text x="314" y="140" text-anchor="middle">5–8</text>
+            </svg>
+          </div>
+          <div class="card-body">
+            <p class="eyebrow">ДВС КР 09.00.00.00 СБ</p>
+            <h2 id="cardV8">V-образный 8-цилиндровый</h2>
+            <p class="desc">Дизель с турбонаддувом, развал 90°: распредвал в развале, толкатели, штанги и коромысла, ТНВД в развале, шестерни привода сзади, два турбокомпрессора.</p>
+            <dl class="facts">
+              <div><dt>Цилиндр × ход</dt><dd>Ø125 × 130 мм</dd></div><div><dt>Рабочий объём</dt><dd>12 763 см³</dd></div>
+              <div><dt>Порядок работы</dt><dd>1-5-4-2-6-3-7-8</dd></div><div><dt>Позиций в модели</dt><dd>40</dd></div>
+            </dl>
+            <button type="button" class="open">Открыть модель <span aria-hidden="true">→</span></button>
+          </div>
+        </article>
+        <article class="card" data-tab="b4" aria-labelledby="cardB4">
+          <div class="art paper">
+            <svg class="schem" viewBox="0 0 360 214" role="img" aria-label="Схема оппозитного четырёхцилиндрового двигателя, поперечный разрез">
+              <!-- cross-section from the belt end: opposed bores on one crank, a camshaft in each head, intake arching over the top -->
+              <path class="axis" d="M8 120H352"></path>
+              <path class="axis" d="M180 8V210"></path>
+              <path class="ln" d="M46 82C52 38 108 22 160 30M314 82C308 38 252 22 200 30"></path>
+              <path class="thin" d="M60 82C68 48 112 38 160 42M300 82C292 48 248 38 200 42"></path>
+              <rect class="ln" x="160" y="20" width="40" height="28" rx="9"></rect>
+              <path class="cut ln" d="M22 84H62V156H22Q14 156 14 148V92Q14 84 22 84Z"></path>
+              <path class="cut ln" d="M338 84H298V156H338Q346 156 346 148V92Q346 84 338 84Z"></path>
+              <circle class="pis" cx="34" cy="120" r="9"></circle><circle class="solid" cx="34" cy="120" r="2"></circle>
+              <circle class="pis" cx="326" cy="120" r="9"></circle><circle class="solid" cx="326" cy="120" r="2"></circle>
+              <path class="cut ln" d="M62 90H150V150H62Z"></path>
+              <path class="cut ln" d="M298 90H210V150H298Z"></path>
+              <rect class="bore" x="62" y="98" width="88" height="44"></rect>
+              <rect class="bore" x="210" y="98" width="88" height="44"></rect>
+              <rect class="hot" x="62" y="100" width="6" height="40"></rect><rect class="hot" x="292" y="100" width="6" height="40"></rect>
+              <rect class="pis" x="68" y="100" width="30" height="40" rx="1.5"></rect>
+              <rect class="pis" x="262" y="100" width="30" height="40" rx="1.5"></rect>
+              <path class="thin" d="M73 100V140M77 100V140M287 100V140M283 100V140"></path>
+              <path class="ln" d="M86 120H164M274 120H196"></path>
+              <circle class="solid" cx="86" cy="120" r="3"></circle><circle class="solid" cx="274" cy="120" r="3"></circle>
+              <path class="ln" d="M150 84H210M150 156H210"></path>
+              <circle class="thin" cx="180" cy="120" r="24"></circle>
+              <circle class="pis" cx="164" cy="120" r="6"></circle><circle class="pis" cx="196" cy="120" r="6"></circle>
+              <circle class="solid" cx="180" cy="120" r="3"></circle>
+              <path class="ln" d="M150 156V166Q150 200 168 202H192Q210 200 210 166V156"></path>
+              <path class="ln" d="M44 156V184Q44 196 56 198H100M316 156V184Q316 196 304 198H260"></path>
+              <text x="106" y="80" text-anchor="middle">1, 3</text><text x="254" y="80" text-anchor="middle">2, 4</text>
+            </svg>
+          </div>
+          <div class="card-body">
+            <p class="eyebrow">Сборочный чертёж · 4 листа</p>
+            <h2 id="cardB4">Оппозитный 4-цилиндровый</h2>
+            <p class="desc">Бензиновый «боксер»: цилиндры лежат друг против друга, по распредвалу в каждой головке, коромысла с регулировочными винтами, один зубчатый ремень на оба распредвала и насос.</p>
+            <dl class="facts">
+              <div><dt>Цилиндр × ход</dt><dd>Ø83 × 83 мм</dd></div><div><dt>Рабочий объём</dt><dd>1796 см³</dd></div>
+              <div><dt>Порядок работы</dt><dd>1-3-2-4</dd></div><div><dt>Листов чертежа</dt><dd>4</dd></div>
+            </dl>
+            <button type="button" class="open">Открыть модель <span aria-hidden="true">→</span></button>
+          </div>
+        </article>
+      </div>
+      <p class="menu-foot">Вращайте модель мышью или пальцем, нажмите на деталь — откроется её карточка. Пробел — пуск и пауза, стрелки — поворот коленвала на 5°.</p>
+    </div>
+  </section>
+
+  <div class="app" data-panel="i4" id="panel-i4" role="tabpanel" aria-label="Рядный 4-цилиндровый" hidden></div>
+  <div class="app" data-panel="v8" id="panel-v8" role="tabpanel" aria-label="V-образный 8-цилиндровый" hidden></div>
+  <div class="app" data-panel="b4" id="panel-b4" role="tabpanel" aria-label="Оппозитный 4-цилиндровый" hidden></div>
+</div>
+
+<template id="engineTpl">
+  <main class="stage" data-role="stage">
+    <div class="viewport" data-role="viewport"></div>
+    <svg class="callouts" data-role="callouts" role="group" aria-label="Позиции по спецификации"></svg>
+    <div class="frame" aria-hidden="true"></div>
+    <div class="loading" data-role="loading">Собираю двигатель…</div>
+
+    <div class="stage-top">
+      <div class="brand"><b data-role="title"></b><span data-role="code"></span></div>
+      <div class="tools">
+        <div class="seg" role="group" aria-label="Вид" data-role="views"></div>
+        <div class="seg" role="group" aria-label="Корпусные детали" data-role="housing"></div>
+        <button type="button" class="chip" data-role="calloutBtn" aria-pressed="true">Позиции</button>
+      </div>
+    </div>
+
+    <div class="part-card" data-role="partCard" hidden>
+      <button type="button" class="close" data-role="pcClose" aria-label="Снять выделение">×</button>
+      <div class="pc-head"><span class="pc-pos" data-role="pcPos"></span><h3 data-role="pcName"></h3><span class="pc-qty" data-role="pcQty"></span></div>
+      <p data-role="pcDesc"></p>
+      <div class="pc-actions">
+        <button type="button" class="chip" data-role="pcFocus">Приблизить</button>
+        <button type="button" class="chip" data-role="pcIsolate" aria-pressed="false">Только эта деталь</button>
+      </div>
+    </div>
+    <div class="tip" data-role="tip" hidden></div>
+
+    <div class="transport" data-role="transport">
+      <button type="button" class="tbtn play" data-role="playBtn" aria-label="Пауза">❚❚</button>
+      <button type="button" class="tbtn" data-role="stepBack" aria-label="Назад на 5°">−5</button>
+      <button type="button" class="tbtn" data-role="stepFwd" aria-label="Вперёд на 5°">+5</button>
+      <div class="scrub">
+        <div class="scrub-head"><label data-role="angleLabel">Угол коленвала</label><output data-role="angleOut">0°</output></div>
+        <input type="range" data-role="angle" min="0" max="720" step="1" value="0">
+        <div class="ticks"><span>0</span><span>180</span><span>360</span><span>540</span><span>720</span></div>
+      </div>
+      <div class="firing" data-role="firing" role="group" aria-label="Цилиндры"></div>
+    </div>
+
+    <table class="stamp" data-role="stamp" aria-hidden="true">
+      <tr><td colspan="3" class="code" data-role="stampCode"></td></tr>
+      <tr><td rowspan="2" class="big" data-role="stampName"></td><td>Лит.</td><td>Масштаб</td></tr>
+      <tr><td>У</td><td>3D, мм</td></tr>
+      <tr><td>Сборочный чертёж</td><td colspan="2">Лист 1 · Листов 1</td></tr>
+    </table>
+  </main>
+
+  <aside class="sheet" aria-label="Параметры и спецификация">
+    <section>
+      <h2>Режим работы <small data-role="realSpeed"></small></h2>
+      <div class="spec-line" data-role="specLine"></div>
+      <div class="readout"><label data-role="rpmLabel">Частота вращения</label><span class="big-num" data-role="rpmOut">0<small>об/мин</small></span></div>
+      <input type="range" data-role="rpm">
+      <div class="row2">
+        <span class="note">Показ замедлен</span>
+        <div class="seg" role="group" aria-label="Замедление" data-role="slow"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="v" data-role="powOut">0</span><span class="u">кВт, индикаторная мощность</span></div>
+        <div class="stat"><span class="v" data-role="trqOut">0</span><span class="u">Н·м, крутящий момент</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Цилиндр <small>по клику на цилиндр или газ</small></h2>
+      <div class="row2">
+        <div class="seg" role="group" aria-label="Цилиндр" data-role="cylSel"></div>
+        <span class="stroke-pill" data-role="strokePill"><i></i><span data-role="strokeName">—</span></span>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="v" data-role="pOut">0</span><span class="u">бар, давление</span></div>
+        <div class="stat"><span class="v" data-role="tOut">0</span><span class="u">К, температура</span></div>
+        <div class="stat"><span class="v" data-role="vOut">0</span><span class="u">см³, объём над поршнем</span></div>
+        <div class="stat"><span class="v" data-role="xOut">0</span><span class="u">мм, поршень ниже ВМТ</span></div>
+        <div class="stat"><span class="v" data-role="liOut">0</span><span class="u">мм, подъём впускного</span></div>
+        <div class="stat"><span class="v" data-role="leOut">0</span><span class="u">мм, подъём выпускного</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Фазы газораспределения <small>угол цикла цилиндра</small></h2>
+      <canvas class="chart" data-role="liftChart" width="712" height="300" aria-label="Подъём клапанов и ход поршня по углу цикла"></canvas>
+      <div class="legend" data-role="liftLegend"></div>
+    </section>
+
+    <section>
+      <h2>Индикаторная диаграмма <small>P–V, лог. шкала</small></h2>
+      <canvas class="chart" data-role="pvChart" width="712" height="380" aria-label="Индикаторная диаграмма P–V"></canvas>
+      <div class="legend"><span><i style="background:var(--intake)"></i>впуск</span><span><i style="background:var(--compression)"></i>сжатие</span><span><i style="background:var(--power)"></i>рабочий ход</span><span><i style="background:var(--exhaust)"></i>выпуск</span></div>
+    </section>
+
+    <section>
+      <h2>Спецификация <small>нажмите строку</small></h2>
+      <table class="spec" data-role="spec"><thead><tr><th>Поз.</th><th>Наименование</th><th style="text-align:right">Кол.</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section>
+      <h2>Слои и материалы</h2>
+      <div class="checks" data-role="layers"></div>
+      <div class="row2">
+        <span class="note">Окраска деталей</span>
+        <div class="seg" role="group" aria-label="Окраска" data-role="palette">
+          <button type="button" data-pal="metal" aria-pressed="true">Металл</button>
+          <button type="button" data-pal="nodes" aria-pressed="false">По узлам</button>
+        </div>
+      </div>
+    </section>
+
+    <footer data-role="footer"></footer>
+  </aside>
+</template>
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="js/geom.js"></script>
+<script src="js/i4/spec.js"></script>
+<script src="js/i4/materials.js"></script>
+<script src="js/i4/build-crank.js"></script>
+<script src="js/i4/build-pistons.js"></script>
+<script src="js/i4/build-valvetrain.js"></script>
+<script src="js/i4/build-timing.js"></script>
+<script src="js/i4/build-housings.js"></script>
+<script src="js/i4/build-aux.js"></script>
+<script src="js/i4/build-gas.js"></script>
+<script src="js/i4/engine.js"></script>
+<script src="js/v8/spec.js"></script>
+<script src="js/v8/materials.js"></script>
+<script src="js/v8/build-crank.js"></script>
+<script src="js/v8/build-pistons.js"></script>
+<script src="js/v8/build-valvetrain.js"></script>
+<script src="js/v8/build-timing.js"></script>
+<script src="js/v8/build-fuel.js"></script>
+<script src="js/v8/build-aux.js"></script>
+<script src="js/v8/build-air.js"></script>
+<script src="js/v8/build-housings.js"></script>
+<script src="js/v8/build-gas.js"></script>
+<script src="js/v8/engine.js"></script>
+<script src="js/b4/spec.js"></script>
+<script src="js/b4/materials.js"></script>
+<script src="js/b4/build-crank.js"></script>
+<script src="js/b4/build-pistons.js"></script>
+<script src="js/b4/build-valvetrain.js"></script>
+<script src="js/b4/build-timing.js"></script>
+<script src="js/b4/build-housings.js"></script>
+<script src="js/b4/build-aux.js"></script>
+<script src="js/b4/build-air.js"></script>
+<script src="js/b4/build-gas.js"></script>
+<script src="js/b4/engine.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+
+</body></html>
