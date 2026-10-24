@@ -1,15 +1,3 @@
-/* b4/spec.js — оппозитный 4-цилиндровый двигатель по сборочному чертежу (4 листа: вид А со
-   снятой крышкой ремня, поперечный и продольный разрезы, вид Б на головку), в миллиметрах.
-   Pure math, no THREE/DOM — the same numbers drive geometry, animation and charts.
-
-   Layout read off the sheets: flat-four «боксер», SOHC head per bank with 4 valves per cylinder
-   worked by rockers, one toothed belt driving both camshafts plus the coolant pump, crank-nose
-   gerotor oil pump, intake manifold over the top, exhaust under the heads.
-
-   World axes (mm): X along the crankshaft, belt end (front) at −X, flywheel at +X; Y up, crank
-   axis at Y=0; Z across: right bank (cylinders 1, 3) at −Z, left bank (2, 4) at +Z. Positive
-   rotation about +X turns +Y toward +Z — clockwise seen from the front, as on the drawing.
-   Bank frame of cylinder c: a = along its axis outward (0 at the crank), s = up (+Y). */
 (function (root) {
 'use strict';
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
@@ -17,21 +5,19 @@ const mod = (a, m) => ((a % m) + m) % m;
 const wrapPi = a => mod(a + Math.PI, TAU) - Math.PI;
 const E = { id: 'b4', DEG, TAU, mod, wrapPi };
 
-/* ------------------------------------------------------------ cranktrain ---- */
 E.bore = 83;  E.stroke = 83;  E.r = 41.5;  E.rodLen = 143.5;  E.compH = 32.5;
-E.pitch = 108;                          // same-bank spacing; the banks are offset half a pitch
-E.pinX = [-81, -27, 27, 81];            // one throw per cylinder, cylinders 1…4 front to rear
+E.pitch = 108;
+E.pinX = [-81, -27, 27, 81];
 E.mainX = [-108, -54, 0, 54, 108];
 E.mainD = 60;  E.mainW = 19;  E.pinD = 52;  E.pinW = 21;  E.webT = 7;
-E.rodW = 20;  E.rodBig = 55;            // big-end bore incl. shells
+E.rodW = 20;  E.rodBig = 55;
 E.pistonR = 41.3;  E.pistonH = 50;  E.pinOD = 23;  E.pinID = 14;
 E.deck = 218;  E.gasket = 1.2;  E.fireFace = E.deck + E.gasket;
 
-// along the crank (X), read off the longitudinal section
-E.blockX = [-136, 132];                 // block front / rear faces
-E.oilPumpX = [-150, -136];              // gerotor housing on the block front, round the crank nose
-E.flywheelX = 160;                      // flywheel hub face on the crank flange
-E.headX = { R: [-149, 118], L: [-149, 158] };      // head castings; the belt end is common
+E.blockX = [-136, 132];
+E.oilPumpX = [-150, -136];
+E.flywheelX = 160;
+E.headX = { R: [-149, 118], L: [-149, 158] };
 E.camJournals = { R: [-130, -27, 78], L: [-120, 27, 135] };
 E.camEnd = { R: 104, L: 150 };
 
@@ -47,7 +33,6 @@ E.bankPoint = function (c, x, a, s) {
   const A = E.axisOf(c), N = E.vSideOf(c);
   return [x, a * A.y + s * N.y, a * A.z + s * N.z];
 };
-// opposed pistons 1 & 2 reach TDC together, 3 & 4 sit at BDC: throws 0°/180°/180°/0°
 E.pinAngle = [-90, 90, 90, -90].map(d => d * DEG);
 
 E.kin = function (c, theta) {
@@ -63,25 +48,18 @@ E.kin = function (c, theta) {
   };
 };
 
-// firing order 1-3-2-4, one firing every 180°. Cycle phase 0 = TDC at the start of intake.
 E.firing = [1, 3, 2, 4];
 E.cycleOff = [0, 0, 0, 0];
 E.firing.forEach((n, k) => { E.cycleOff[n - 1] = mod(360 - 180 * k, 720); });
 E.phaseOf = (c, thetaDeg) => mod(thetaDeg + E.cycleOff[c], 720);
 
-/* ------------------------------------------------------------ head & valvetrain ---- */
-// pent-roof chamber: ridge across the bore at s = 0, intake roof up (+s), exhaust roof down
 E.ridgeH = 13.5;  E.ridgeA = E.fireFace + E.ridgeH;
-E.camA = 316;  E.camS = 0;              // one camshaft per head, on the cylinder axis line
+E.camA = 316;  E.camS = 0;
 E.kappa = 0.5;
 E.camBase = 18;  E.camJournalR = 13.5;  E.lobeW = 12;
-E.camBeta = 76 * DEG;                    // half-duration of the rocker law, cam degrees
-E.peak = { in: 108, ex: 612 };           // cycle phase of maximum lift
-E.spark = 350;                           // ignition, cycle phase (10° before firing TDC)
-// per side: valve angle off the cylinder axis, seat offset s, x positions, rocker shaft (both
-// shafts as drawn, 22.5 above and below the camshaft), pad contact angle on the base circle (γ),
-// and the rocker law amplitude. γ is chosen so each pad clears the other rocker shaft over its
-// whole swing and the rocker ratio stays 1.75 (intake) / 1.9 (exhaust).
+E.camBeta = 76 * DEG;
+E.peak = { in: 108, ex: 612 };
+E.spark = 350;
 E.vt = {
   in: { sg: 1, angle: 22 * DEG, seatS: 17, dx: 18, headR: 16.5, len: 116, shaft: { a: 347, s: 22.5 }, gamma: -8 * DEG,
         phiMax: 13.4 * DEG, lobeX: 27 },
@@ -89,22 +67,20 @@ E.vt = {
         phiMax: 16.9 * DEG, lobeX: 10 },
 };
 E.stemR = 3;  E.screwR = 4;  E.rockerShaftR = 8;
-E.springSeatT = 62;  E.springTopT = 106;  // along the valve axis from the seat face (closed)
+E.springSeatT = 62;  E.springTopT = 106;
 E.pocketDepth = 2.6;
-// spark plug: electrode at the middle of the roof, well rising outward 24° toward the intake side
 E.plugTip = [E.ridgeA - 2.2, 0];  E.plugAngle = 24 * DEG;
 
 const rot2 = (v, f) => [v[0] * Math.cos(f) - v[1] * Math.sin(f), v[0] * Math.sin(f) + v[1] * Math.cos(f)];
 ['in', 'ex'].forEach(side => {
   const V = E.vt[side];
-  V.u = [Math.cos(V.angle), V.sg * Math.sin(V.angle)];               // valve axis, seat → tip
+  V.u = [Math.cos(V.angle), V.sg * Math.sin(V.angle)];
   V.seat = [E.ridgeA - Math.abs(V.seatS) * Math.tan(V.angle), V.seatS];
   V.tip = [V.seat[0] + V.len * V.u[0], V.seat[1] + V.len * V.u[1]];
-  V.ball = [V.tip[0] + E.screwR * V.u[0], V.tip[1] + E.screwR * V.u[1]];   // screw ball centre, valve shut
+  V.ball = [V.tip[0] + E.screwR * V.u[0], V.tip[1] + E.screwR * V.u[1]];
   V.n0 = [Math.cos(V.gamma), Math.sin(V.gamma)];
-  V.C0 = [E.camA + E.camBase * V.n0[0], E.camS + E.camBase * V.n0[1]];   // pad touches the base circle here
+  V.C0 = [E.camA + E.camBase * V.n0[0], E.camS + E.camBase * V.n0[1]];
 });
-// rocker angle law (radians, + opens), against the cam angle from the lobe's peak
 E.rockerLaw = function (side, rel) {
   const u = wrapPi(rel) / E.camBeta;
   if (Math.abs(u) >= 1) return 0;
@@ -116,14 +92,12 @@ E.rockerLawD = function (side, rel) {
   if (Math.abs(u) >= 1) return 0;
   return -4 * E.vt[side].phiMax * u * (1 - u * u) / E.camBeta;
 };
-// pad line of the rocker turned by φ: unit normal n and offset h from the cam centre
 E.padLine = function (side, phi) {
   const V = E.vt[side], P = [V.shaft.a, V.shaft.s], f = V.sg * phi;
   const n = rot2(V.n0, f), C = rot2([V.C0[0] - P[0], V.C0[1] - P[1]], f);
   const Cx = P[0] + C[0], Cy = P[1] + C[1];
   return { n, C: [Cx, Cy], h: n[0] * (Cx - E.camA) + n[1] * (Cy - E.camS) };
 };
-// screw ball centre of the rocker turned by φ, and the valve lift that follows
 E.ballAt = function (side, phi) {
   const V = E.vt[side], P = [V.shaft.a, V.shaft.s], b = rot2([V.ball[0] - P[0], V.ball[1] - P[1]], V.sg * phi);
   return [P[0] + b[0], P[1] + b[1]];
@@ -132,10 +106,6 @@ E.liftOfPhi = function (side, phi) {
   const V = E.vt[side], B = E.ballAt(side, phi);
   return -((B[0] - V.ball[0]) * V.u[0] + (B[1] - V.ball[1]) * V.u[1]);
 };
-/* The lobe is the envelope of the rocker's pad line in the cam frame. With the cam turned by Θ
-   (CCW in the (a,s) plane) from its peak, the pad sits at φ(Θ); in the cam frame its normal is
-   at ψ = γ + sg·φ − Θ and its distance from the cam centre is h. The envelope point is
-   h·n(ψ) + (dh/dψ)·t(ψ) — so the lobe touches the pad exactly, at every angle, by construction. */
 E.lobeProfile = function (side, n) {
   n = n || 360;
   const V = E.vt[side], pts = [];
@@ -147,10 +117,10 @@ E.lobeProfile = function (side, n) {
     const hp = dhdphi * dphi / dpsi;
     pts.push([h * Math.cos(psi) - hp * Math.sin(psi), h * Math.sin(psi) + hp * Math.cos(psi)]);
   }
-  return pts;                 // (a, s) relative to the cam centre, lobe at its peak orientation
+  return pts;
 };
 E.thetaPeak = (c, side) => mod(E.peak[side] - E.cycleOff[c], 720) * DEG;
-E.camRel = (c, side, theta) => E.kappa * (theta - E.thetaPeak(c, side));   // cam angle from peak
+E.camRel = (c, side, theta) => E.kappa * (theta - E.thetaPeak(c, side));
 E.phiAt = (c, side, theta) => E.rockerLaw(side, E.camRel(c, side, theta));
 const LIFT_N = 600, liftTab = { in: [], ex: [] };
 ['in', 'ex'].forEach(side => { for (let k = 0; k <= LIFT_N; k++) liftTab[side].push(E.liftOfPhi(side, E.vt[side].phiMax * k / LIFT_N)); });
@@ -161,24 +131,15 @@ E.valveLiftOfPhi = function (side, phi) {
 E.valveLiftMax = { in: liftTab.in[LIFT_N], ex: liftTab.ex[LIFT_N] };
 E.valveLiftAt = (c, side, theta) => E.valveLiftOfPhi(side, E.phiAt(c, side, theta));
 E.valveLiftAtPhase = (side, phaseDeg) => E.valveLiftOfPhi(side, E.rockerLaw(side, (phaseDeg - E.peak[side]) * DEG * E.kappa));
-// valve centre x (bank-local) and its lobe x on the camshaft
 E.valveLocalX = (side, j) => (j ? 1 : -1) * E.vt[side].dx;
 E.lobeLocalX = (side, j) => (j ? 1 : -1) * E.vt[side].lobeX;
 
-/* ------------------------------------------------------------ timing belt ---- */
-// read off view A: both cam pulleys level with the crank, 632 apart; two plain idlers (поз. 18)
-// on the right-head side, the automatic tensioner roller beside the crank, a plain idler and
-// the coolant-pump pulley (поз. 24) on the left-head side.
 E.beltX = -165;  E.beltW = 24;  E.beltPitch = 9.525;
 E.beltBack = 2.0;  E.beltIn = 0.8;  E.toothH = 3.6;
 E.z = { crank: 22, cam: 44, pump: 24 };
 E.pd = z => z * E.beltPitch / Math.PI;
-// back-side rollers: radius of the belt pitch line on them (roller face = R − beltBack)
 E.idlerR = 34.5;  E.tensR = 38.5;
-// tensioner bracket pivots on the bolt above-right of the crank; the hydraulic adjuster presses its tail
 E.tensioner = { pivot: { u: 40.3, v: 39.8 }, arm: 53.6, prefer: 132 * DEG };
-// pulleys in travel order (clockwise seen from the front = CCW in (u, v) = (Y, Z));
-// teeth side +1, back side −1
 E.pulleys = function (gamma) {
   const t = E.tensioner, Rc = E.pd(E.z.crank) / 2, Rk = E.pd(E.z.cam) / 2;
   return [
@@ -228,11 +189,10 @@ E.beltSample = function (path, s) {
   else { const p = pc.pulley, a = pc.a0 + pc.dir * ls / p.R; u = p.u + p.R * Math.cos(a); v = p.v + p.R * Math.sin(a); tu = -Math.sin(a) * pc.dir; tv = Math.cos(a) * pc.dir; }
   return { u, v, tu, tv, nu: -tv, nv: tu, piece: pc };
 };
-// swing the tensioner arm until the loop is a whole number of pitches long
 E.solveBelt = function () {
   const p = E.beltPitch, t = E.tensioner;
   const lenAt = g => { const path = E.beltPath(E.pulleys(g)); return path ? path.length : NaN; };
-  const N = Math.round(lenAt(t.prefer) / p), want = N * p;     // nearest whole tooth count to the drawn roller
+  const N = Math.round(lenAt(t.prefer) / p), want = N * p;
   let prev = null, best = null;
   for (let gd = 60; gd <= 220; gd += 0.25) {
     const g = gd * DEG, L = lenAt(g);
@@ -252,7 +212,6 @@ E.solveBelt = function () {
   return { gamma: best.gamma, N, path: E.beltPath(pulleys), pulleys };
 };
 
-/* ------------------------------------------------------------ Otto cycle ---- */
 const Bm = E.bore / 1000, Sm = E.stroke / 1000, Lm = E.rodLen / 1000, rm = Sm / 2;
 E.CR = 10;
 E.Ap = Math.PI * Bm * Bm / 4;

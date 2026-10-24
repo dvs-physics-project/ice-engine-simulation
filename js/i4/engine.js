@@ -1,6 +1,3 @@
-/* i4/engine.js — assembles every part module into one scene and owns the per-frame update.
-   Exposes window.ENGINE_I4. Depends on THREE r128 (+ OrbitControls, RoomEnvironment,
-   BufferGeometryUtils), i4/spec.js (ENG_I4), geom.js (G), i4/materials.js (MAT_I4), i4/build-*.js. */
 (function () {
 'use strict';
 const V3 = THREE.Vector3;
@@ -11,7 +8,7 @@ EN.init = function (viewport) {
   const E = window.ENG_I4, M = window.MAT_I4;
   EN.E = E;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  const small = Math.min(window.innerWidth, window.innerHeight) < 700;   // phones: lighter GPU load
+  const small = Math.min(window.innerWidth, window.innerHeight) < 700;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.5 : 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -45,7 +42,6 @@ EN.init = function (viewport) {
   controls.minDistance = 160; controls.maxDistance = 3200;
   controls.screenSpacePanning = true;
 
-  /* ---------------- build ---------------- */
   const sol = E.solveBelt();
   const ph = BUILD_I4.beltPhases(E, sol);
   const registry = { layer: {}, part: {} };
@@ -83,14 +79,12 @@ EN.init = function (viewport) {
   gas.flames.forEach(s => scene.add(s));
   scene.add(gas.flash, gas.points);
 
-  // ghost bookkeeping (for section clipping & opacity)
   const ghostMats = Object.values(M.ghost), edgeMats = Object.values(M.ghostEdges);
   const clipTargets = ghostMats.concat(edgeMats, [M.mat.gasket, M.mat.camCap, M.hw.steel]);
 
   Object.assign(EN, { renderer, scene, camera, controls, crank, pist, vt, tm, hs, aux, gas, registry, sol,
     ctxPhase: ph.phase, sTooth0: ph.sTooth0 });
 
-  /* ---------------- layers & housing modes ---------------- */
   EN.layerOn = { crank: true, pistons: true, valvetrain: true, timing: true, housing: true, aux: true, gas: true };
   EN.timingCover = false;
   EN.housingMode = 'ghost';
@@ -119,7 +113,7 @@ EN.init = function (viewport) {
     M.applyPalette(name); EN.dirty = true;
     M.mat.beltBand.color.copy(M.mat.belt.color); M.mat.beltBand.metalness = M.mat.belt.metalness; M.mat.beltBand.roughness = M.mat.belt.roughness;
   };
-  const updateSectionSide = () => {           // always keep the half that faces away from the camera
+  const updateSectionSide = () => {
     if (EN.housingMode === 'long') {
       const s = camera.position.z >= 0 ? -1 : 1;
       planes.long.normal.set(0, 0, s); planes.long.constant = 0;
@@ -129,7 +123,6 @@ EN.init = function (viewport) {
     }
   };
 
-  /* ---------------- selection ---------------- */
   EN.selected = null; EN.isolated = null;
   EN.select = function (partId) {
     EN.selected = partId;
@@ -154,7 +147,6 @@ EN.init = function (viewport) {
     return box;
   };
 
-  /* ---------------- picking: solid parts win over the ghost housings in front of them ---------------- */
   const ray = new THREE.Raycaster();
   EN.pick = function (ndcX, ndcY) {
     ray.setFromCamera({ x: ndcX, y: ndcY }, camera);
@@ -168,9 +160,6 @@ EN.init = function (viewport) {
   };
   const isShown = o => { let p = o; while (p) { if (!p.visible) return false; p = p.parent; } return true; };
 
-  /* ---------------- camera: presets + focus tween ---------------- */
-  // presets: a viewing direction, a target and the radius that must stay in frame — the
-  // distance is solved for the current stage aspect, so the engine fits on any screen.
   const VIEWS = {
     iso:   { dir: [-0.62, 0.42, 0.66], tgt: [-12, 112, 0], r: 395 },
     front: { dir: [-1, 0.06, 0.0001], tgt: [-215, 140, 0], r: 262 },
@@ -203,13 +192,11 @@ EN.init = function (viewport) {
   };
   EN.view('iso', true);
 
-  /* ---------------- theme ink ---------------- */
   EN.setDark = function (dark) { M.setInk(dark); EN.dirty = true; };
 
-  /* ---------------- sizing ---------------- */
   EN.resize = function () {
     const w = viewport.clientWidth, h = viewport.clientHeight;
-    if (!w || !h) return;                       // hidden tab: keep the last good size
+    if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(h, 1);
     camera.updateProjectionMatrix();
@@ -219,7 +206,6 @@ EN.init = function (viewport) {
   new ResizeObserver(EN.resize).observe(viewport);
   EN.resize();
 
-  /* ---------------- per-frame ---------------- */
   EN.theta = 0;
   EN.update = function (theta, dTheta) {
     EN.theta = theta; EN.dirty = true;
@@ -230,8 +216,6 @@ EN.init = function (viewport) {
     aux.update(theta);
     gas.update(theta, dTheta, vt.lifts);
   };
-  // render on demand: only while something moves (playback, orbit damping, a camera tween,
-  // the selection pulse) or after a state change — a paused engine costs nothing.
   EN.dirty = true;
   EN.invalidate = () => { EN.dirty = true; };
   controls.addEventListener('change', EN.invalidate);

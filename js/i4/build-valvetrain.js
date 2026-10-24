@@ -1,8 +1,3 @@
-/* build-valvetrain.js — DOHC 16V: поз. 11 camshafts (true flat-follower lobe profile from
-   spec.js), поз. 9 cam pulleys, bearing caps, 16 valves with bucket tappets, double springs,
-   retainers, guides and seals, plus the head's intake/exhaust ports (ghost tubes, also used
-   as the gas-flow paths). Valve, tappet and spring positions are read off the same lift
-   function that shaped the lobes, so every lobe touches its tappet exactly. */
 (function () {
 'use strict';
 window.BUILD_I4 = window.BUILD_I4 || {};
@@ -12,7 +7,6 @@ BUILD_I4.valvetrain = function (ctx) {
   const E = ctx.E, MM = ctx.M, M = MM.mat;
   const out = { cams: [], ports: { in: [], ex: [] } };
 
-  /* ---------------- camshafts ---------------- */
   const prof = E.lobeProfile(240);
   const lobeShape = G.shapeFromPts(prof);
   const camJournals = [-172, -86, 0, 86, 172];
@@ -22,12 +16,11 @@ BUILD_I4.valvetrain = function (ctx) {
     const core = [G.cylX(11, -205, 188, 28), G.cylX(10, -232, -205, 28)];
     const polish = [];
     camJournals.forEach((x, k) => polish.push(G.cylX(12.5, x - (k === 0 ? 14 : 10), x + 10, 36)));
-    polish.push(G.cylX(17, -159, -156, 36));                       // thrust collar
+    polish.push(G.cylX(17, -159, -156, 36));
     for (let i = 0; i < 4; i++) {
       const a = E.lobeAngle(i, s);
       for (const d of [-1, 1]) {
         const x = E.cylX[i] + d * E.valveDX;
-        // no bevel: any outward bevel would make the drawn lobe taller than the lift law
         const geo = new THREE.ExtrudeGeometry(lobeShape, { depth: E.lobeW, bevelEnabled: false, curveSegments: 1 });
         geo.rotateZ(a);
         geo.translate(0, 0, x - E.lobeW / 2);
@@ -39,7 +32,6 @@ BUILD_I4.valvetrain = function (ctx) {
     const lobes = new THREE.Mesh(G.merge(polish), M.camLobe);
     [shaft, lobes].forEach(m => { ctx.tag(m, 'camshaft', 'valvetrain'); m.castShadow = m.receiveShadow = true; cg.add(m); });
 
-    /* поз. 9 cam pulley (46 teeth) with spoked web, hub and bolt */
     const R = E.pd(E.z.cam) / 2;
     const phase = ctx.belt.phase[s < 0 ? 'camIn' : 'camEx'];
     const rim = G.timingPulleyShape(E.z.cam, R, { phase, holes: [G.circlePath(0, 0, R - 9, true)] });
@@ -67,14 +59,13 @@ BUILD_I4.valvetrain = function (ctx) {
     out.cams.push({ s, group: cg });
   }
 
-  /* ---------------- cam bearing caps (part of the head, поз. 4) ---------------- */
   const capGeos = [];
   for (const s of [-1, 1]) {
     camJournals.forEach((x, k) => {
       const w = k === 0 ? 28 : 18;
       const shp = new THREE.Shape();
       shp.moveTo(0, -25); shp.lineTo(0, -12.6);
-      shp.absarc(0, 0, 12.6, -Math.PI / 2, Math.PI / 2, false);   // notch round the journal
+      shp.absarc(0, 0, 12.6, -Math.PI / 2, Math.PI / 2, false);
       shp.lineTo(0, 25); shp.lineTo(17, 25); shp.quadraticCurveTo(23, 25, 23, 19);
       shp.lineTo(23, -19); shp.quadraticCurveTo(23, -25, 17, -25); shp.closePath();
       const g = G.extrudeX(shp, x - w / 2 - (k === 0 ? 4 : 0), x + w / 2 - (k === 0 ? 4 : 0), { curveSegments: 14 });
@@ -91,11 +82,10 @@ BUILD_I4.valvetrain = function (ctx) {
   caps.castShadow = caps.receiveShadow = true;
   out.caps = caps;
 
-  /* ---------------- valves, tappets, springs (instanced) ---------------- */
   const valveGeo = s => {
     const R = s < 0 ? E.valveHeadR.in : E.valveHeadR.ex, L = E.valveLen, st = E.stemR;
     const pts = [[0, 0], [R, 0], [R, 1.2], [R - 2.4, 3.6]];
-    for (let k = 1; k <= 8; k++) {                       // tulip fillet into the stem
+    for (let k = 1; k <= 8; k++) {
       const t = k / 8, a = (R - 2.4) + (st - (R - 2.4)) * (1 - Math.pow(1 - t, 2.2));
       pts.push([a, 3.6 + 13 * t]);
     }
@@ -129,7 +119,7 @@ BUILD_I4.valvetrain = function (ctx) {
   const springsI = mk(innerSpring, M.spring, 'springs', 16);
   const retainers = mk(retainerGeo, M.retainer, 'springs', 16);
   const rubber = new THREE.MeshStandardMaterial({ color: MM.srgb('#17191c'), roughness: 0.65, metalness: 0 });
-  const staticParts = [];   // seats, guides, seals: built once
+  const staticParts = [];
   const seatG = [], guideG = [], sealG = [];
 
   const valveList = [];
@@ -153,7 +143,6 @@ BUILD_I4.valvetrain = function (ctx) {
   const sealsMesh = new THREE.Mesh(G.merge(sealG), rubber); ctx.tag(sealsMesh, 'head', 'valvetrain');
   staticParts.push(seatsMesh, guidesMesh, sealsMesh);
 
-  /* ---------------- ports (ghost tubes, paths for the flow particles) ---------------- */
   const portGeos = [];
   for (const s of [-1, 1]) {
     const rad = s < 0 ? 11.5 : 10;

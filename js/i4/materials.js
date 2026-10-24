@@ -1,14 +1,9 @@
-/* materials.js — PBR materials (one per part type, so a part can be highlighted on its own),
-   two palettes ('metal' = realistic finishes, 'nodes' = each assembly in its own colour),
-   the ghost material for housings, and the part registry keyed to the drawing's
-   specification (поз. 1–27). Depends on THREE. */
 (function () {
 'use strict';
 const M = {};
 const srgb = hex => new THREE.Color(hex).convertSRGBToLinear();
 M.srgb = srgb;
 
-/* ---------------- palettes: [hex, metalness, roughness] per material key ---------------- */
 const METAL = {
   crankForged:   ['#7d838c', 0.92, 0.42], crankJournal: ['#dfe3e8', 1.0, 0.13],
   flywheel:      ['#55595f', 0.85, 0.55], flywheelFace: ['#c9cdd2', 1.0, 0.22], ringGear: ['#9aa0a7', 1.0, 0.3],
@@ -72,19 +67,17 @@ M.applyPalette = function (name) {
   const P = M.palettes[name] || METAL;
   M.paletteName = name;
   Object.keys(M.mat).forEach(k => {
-    if (!P[k]) return;                         // derived materials (e.g. the belt band) follow their source
+    if (!P[k]) return;
     const [c, m, r] = P[k];
     M.mat[k].color.copy(srgb(c)); M.mat[k].metalness = m; M.mat[k].roughness = r;
   });
 };
 
-/* hardware that belongs to no single part: never highlighted, never repainted */
 M.hw = {
   alu:   new THREE.MeshStandardMaterial({ color: srgb('#b9bec4'), metalness: 0.75, roughness: 0.45 }),
   steel: new THREE.MeshStandardMaterial({ color: srgb('#8c9299'), metalness: 1.0, roughness: 0.35 }),
 };
 
-/* ---------------- ghost material for housings (theme-tinted, see setInk) ---------------- */
 M.ghost = {};
 M.ghostEdges = {};
 const GHOSTS = ['block', 'head', 'cover', 'pan', 'tcover', 'ports', 'caps', 'oilpump'];
@@ -106,8 +99,6 @@ M.setInk = function (dark) {
     M.ghostEdges[k].userData.baseOpacity = dark ? 0.42 : 0.5; M.ghostEdges[k].opacity = M.ghostEdges[k].userData.baseOpacity; });
 };
 
-/* ---------------- part registry: drawing specification + the parts it groups --------------- */
-// layer: which "Слои" toggle owns it; mats: material keys painted for highlight
 M.parts = {
   block:      { pos: '1',  name: 'Блок картера', qty: '1', layer: 'housing', ghost: ['block', 'caps'],
                 desc: 'Чугунный блок с цилиндрами Ø72, рубашкой охлаждения и пятью опорами коленвала. Показан прозрачным, чтобы был виден механизм.' },
@@ -159,7 +150,6 @@ M.parts = {
                 desc: 'Полнопоточный фильтр на кронштейне с выпускной стороны блока.' },
   knock:      { pos: '27', name: 'Датчик детонации', qty: '1', layer: 'aux', mats: ['knock'],
                 desc: 'Пьезодатчик на стенке блока со стороны впуска, ловит вибрацию от детонации.' },
-  // parts shown on the drawing inside assemblies, without their own position number
   piston:     { pos: '—',  name: 'Поршень', qty: '4', layer: 'pistons', mats: ['piston'],
                 desc: 'Литой алюминиевый поршень Ø72 с плоским днищем и выточками под клапаны; юбка — только на нагруженных сторонах.' },
   valveIn:    { pos: '—',  name: 'Клапан впускной', qty: '8', layer: 'valvetrain', mats: ['valveIn'],
@@ -177,11 +167,9 @@ M.parts = {
   dipstick:   { pos: '—',  name: 'Указатель уровня масла', qty: '1', layer: 'aux', mats: ['dipstick'],
                 desc: 'Щуп с метками min/max уходит в поддон со стороны впуска.' },
 };
-// reverse index: material key → part id
 M.partOfMat = {};
 Object.keys(M.parts).forEach(id => (M.parts[id].mats || []).forEach(k => { M.partOfMat[k] = id; }));
 
-/* ---------------- highlight (emissive tint on every material of a part) ---------------- */
 let lit = null;
 M.highlight = function (partId, color) {
   M.clearHighlight();
@@ -201,7 +189,7 @@ M.clearHighlight = function () {
   (M.parts[lit.partId].ghost || []).forEach(k => { M.ghostEdges[k].opacity = M.ghostEdges[k].userData.baseOpacity; });
   lit = null;
 };
-M.pulse = function (t) {                      // gentle breathing of the highlight
+M.pulse = function (t) {
   if (!lit) return;
   const k = 0.32 + 0.18 * Math.sin(t * 4);
   lit.mats.forEach(m => { m.emissiveIntensity = k; });

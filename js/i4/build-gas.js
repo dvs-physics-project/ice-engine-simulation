@@ -1,7 +1,3 @@
-/* build-gas.js — the working gas: each cylinder's charge as a volume bounded by the piston
-   crown and the pent roof (coloured by temperature, density by pressure), a spark at the plug
-   at ignition, and flow particles in the ports that move only while — and as fast as — the
-   real valve lift allows. Particle motion is driven by Δθ, so scrubbing backwards reverses it. */
 (function () {
 'use strict';
 window.BUILD_I4 = window.BUILD_I4 || {};
@@ -25,7 +21,6 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
   const roofY = z => E.seatY - (Math.abs(z) - E.seatZ) * Math.tan(E.valveAngle);
 
   for (let i = 0; i < 4; i++) {
-    // vertices: top cap (polar grid on the roof) + side wall top ring + side wall bottom ring + bottom cap
     const pos = [], idx = [], bottomIdx = [];
     const push = (x, y, z) => { pos.push(x, y, z); return pos.length / 3 - 1; };
     const cx = E.cylX[i];
@@ -61,7 +56,6 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
     out.chambers.push({ mesh, geo, mat, bottomIdx });
   }
 
-  /* ---------- spark: a sprite at the plug gap + one shared flash light ---------- */
   const glowTex = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 64;
     const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -77,7 +71,6 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
     ctx.tag(s, 'gas:' + i, 'gas'); s.userData.pickable = false;
     return s;
   });
-  // flame kernel: an orange glow that grows from the plug gap for ~40° after ignition
   const flameTex = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 64;
     const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -95,7 +88,6 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
   });
   out.flash = new THREE.PointLight(0xffb066, 0, 300, 2);
 
-  /* ---------- flow particles along the port curves ---------- */
   const perBranch = { in: 16, ex: 14 };
   const parts = [];
   for (const side of ['in', 'ex']) for (let i = 0; i < 4; i++) for (let b = 0; b < 2; b++) {
@@ -127,7 +119,6 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
   const tmp = new V3();
   const IN_COL = [0.45, 0.78, 1.0], EX_COL = [1.0, 0.55, 0.2], EX_COLD = [0.55, 0.5, 0.5];
   out.update = function (theta, dTheta, lifts, rpmFactor) {
-    // chambers
     for (let i = 0; i < 4; i++) {
       const k = E.kin(i, theta), ch = out.chambers[i];
       const st = E.thermo(E.phaseOf(i, theta * 180 / Math.PI));
@@ -141,7 +132,6 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
       ch.mat.opacity = 0.16 + 0.5 * Math.max(0, Math.min(1, (lp - lo) / (hi - lo)));
       ch.state = st;
     }
-    // spark: fires around TDC of the compression stroke (phase 352°…368°)
     let flashI = 0, flashAt = null;
     for (let i = 0; i < 4; i++) {
       const ph = E.phaseOf(i, theta * 180 / Math.PI);
@@ -157,14 +147,12 @@ BUILD_I4.gas = function (ctx, ports, sparkTips) {
     }
     out.flash.intensity = flashI * 3.0;
     if (flashAt) out.flash.position.copy(flashAt);
-    // particles: advance by crank travel × real valve lift
     for (let j = 0; j < parts.length; j++) {
       const q = parts[j];
       const lift = lifts[(q.side === 'in' ? 0 : 8) + q.i * 2];
       const rate = 0.95 * (lift / E.camLift);
       if (q.side === 'in') q.t += rate * dTheta; else q.t += rate * dTheta * 1.25;
-      q.t -= Math.floor(q.t);                         // wrap into [0,1) even after a big scrub jump
-      // intake: t=0 at the manifold → 1 at the valve; exhaust: t=0 at the valve → 1 outward
+      q.t -= Math.floor(q.t);
       const u = q.side === 'in' ? q.t : 1 - q.t;
       q.curve.getPointAt(u, tmp);
       const fade = q.side === 'in' ? Math.min(1, (1 - q.t) * 6) * Math.min(1, q.t * 8) : Math.min(1, q.t * 8) * Math.min(1, (1 - q.t) * 5);

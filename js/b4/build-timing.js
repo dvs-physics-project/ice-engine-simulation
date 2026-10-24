@@ -1,10 +1,3 @@
-/* b4/build-timing.js — поз. 14 toothed belt (201 teeth on the exact solved path), поз. 18 idlers
-   on the belt's back, the automatic tensioner (roller on a bracket pressed by the hydraulic
-   adjuster), поз. 24 coolant pump (toothed pulley in the belt + housing on the block front),
-   the fixed timing marks, and the ghost of the removed поз. 17 cover.
-   Belt speed = θ·R(crank); a toothed pulley turns at R(crank)/R(pulley) of the crank (the cams
-   get 22/44 = ½), a back-side roller the other way. Groove phases put a belt tooth in a groove
-   at θ = 0, so they stay in mesh at every angle. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
@@ -30,7 +23,6 @@ BUILD_B4.timing = function (ctx) {
   const L = path.length, bx = E.beltX, X0 = bx - E.beltW / 2, X1 = bx + E.beltW / 2;
   const solid = (geo, mat, part, layer) => { const m = new THREE.Mesh(geo, mat); ctx.tag(m, part, layer || 'timing'); m.castShadow = m.receiveShadow = true; return m; };
 
-  /* ---------- belt band: a closed strip along the pitch line, 4 faces with their own normals ---------- */
   const nS = Math.round(L / 2), ring = [];
   for (let k = 0; k < nS; k++) {
     const q = E.beltSample(path, k / nS * L);
@@ -51,7 +43,6 @@ BUILD_B4.timing = function (ctx) {
   M.beltBand = bandMat;
   out.objects.push(solid(band, bandMat, 'belt'));
 
-  /* ---------- teeth: one instanced round-flanked tooth riding the path ---------- */
   const ts = new THREE.Shape();
   ts.moveTo(-2.6, -0.2); ts.lineTo(2.6, -0.2); ts.lineTo(1.85, E.toothH - 0.9);
   ts.quadraticCurveTo(1.5, E.toothH, 0, E.toothH); ts.quadraticCurveTo(-1.5, E.toothH, -1.85, E.toothH - 0.9); ts.closePath();
@@ -62,7 +53,6 @@ BUILD_B4.timing = function (ctx) {
   ctx.tag(teeth, 'belt', 'timing'); teeth.castShadow = teeth.receiveShadow = true;
   out.objects.push(teeth);
 
-  /* ---------- back-side rollers: поз. 18 idlers and the tensioner roller ---------- */
   const pul = key => sol.pulleys.find(p => p.key === key);
   const spins = [];
   const roller = (key, part, mat, x1Mount) => {
@@ -70,9 +60,8 @@ BUILD_B4.timing = function (ctx) {
     const g = new THREE.Group(); g.position.set(bx, p.u, p.v);
     const body = G.lathe([[10, -13], [Rr - 1.2, -13], [Rr, -11.8], [Rr, 11.8], [Rr - 1.2, 13], [10, 13], [10, -13]], 72, 0, undefined, true);
     G.toX(body);
-    const web = G.tubeX(14, Rr - 5, -4, 4, 56);                // pressed-steel web inside the rim
+    const web = G.tubeX(14, Rr - 5, -4, 4, 56);
     const spin = new THREE.Group(); spin.add(solid(G.merge([body, web]), mat, part)); g.add(spin);
-    // bearing race, washer, bolt and the spacer boss to the engine front: fixed
     g.add(solid(G.merge([
       G.tubeX(6, 10, -13, 13, 32), G.tubeX(6, 14, -15, -13, 32),
       (() => { const h = G.hexPrism(14, 7); G.toX(h); h.translate(-22, 0, 0); return h; })(),
@@ -85,7 +74,6 @@ BUILD_B4.timing = function (ctx) {
   ['idler1', 'idler2', 'idler3'].forEach(k => roller(k, 'idler', M.idler, E.blockX[0]));
   const tp = roller('tens', 'tensioner', M.tensRoller, -150.5);
 
-  // tensioner bracket: pivot bolt, roller axle and the tail the adjuster's rod presses on
   const T = E.tensioner, tail = { u: tp.u - 12, v: tp.v + 48 };
   const circ = (c, r, n) => Array.from({ length: n }, (_, k) => [c.u + r * Math.cos(k / n * Math.PI * 2), c.v + r * Math.sin(k / n * Math.PI * 2)]);
   const bracket = G.shapeFromPts(BUILD_B4.hull(circ(T.pivot, 12, 32).concat(circ(tp, 15, 40), circ(tail, 8, 24))));
@@ -93,7 +81,6 @@ BUILD_B4.timing = function (ctx) {
   const pivotBolt = G.merge([(() => { const h = G.hexPrism(14, 1.6); G.toX(h); h.translate(-152.4, T.pivot.u, T.pivot.v); return h; })(),
     G.cylX(5.5, -150.8, -136, 16).translate(0, T.pivot.u, T.pivot.v)]);
   out.objects.push(solid(G.merge([G.extrudeX(bracket, -150.5, -145, { curveSegments: 16 }), pivotBolt]), M.tensArm, 'tensioner'));
-  // hydraulic adjuster: body bolted to the block, rod pressing the bracket tail
   const rodEnd = new V3(-143, tail.u + 13, tail.v), top = new V3(-143, tail.u + 80, tail.v - 14);
   const dir = top.clone().sub(rodEnd).normalize();
   const bodyA = rodEnd.clone().addScaledVector(dir, 12), bodyB = top.clone().addScaledVector(dir, -8);
@@ -105,7 +92,6 @@ BUILD_B4.timing = function (ctx) {
   out.objects.push(solid(G.merge([G.cylBetween(4.2, rodEnd, bodyA.clone().addScaledVector(dir, 2), 16),
     (() => { const s = new THREE.SphereGeometry(5, 14, 10); s.translate(rodEnd.x, rodEnd.y, rodEnd.z); return s; })()]), M.tensArm, 'tensioner'));
 
-  /* ---------- поз. 24 coolant pump: toothed pulley in the belt, housing on the block front ---------- */
   const pp = pul('pump'), Rp = E.pd(E.z.pump) / 2;
   const pump = new THREE.Group(); pump.position.set(0, pp.u, pp.v);
   const pumpSpin = new THREE.Group();
@@ -119,11 +105,10 @@ BUILD_B4.timing = function (ctx) {
   pump.add(solid(G.merge([
     G.tubeX(8, 44, -144, -136, 64),
     G.cylX(30, -150, -144, 48),
-    G.cylBetween(14, new V3(-142, -20, 30), new V3(-118, -60, 62), 24),          // inlet spigot
+    G.cylBetween(14, new V3(-142, -20, 30), new V3(-118, -60, 62), 24),
   ]), M.pumpBody, 'pump'));
   out.objects.push(pump);
 
-  /* ---------- fixed marks above the cam pulleys (rear cover plate) ---------- */
   const Rk = E.pd(E.z.cam) / 2, markMat = BUILD_B4.markMat();
   for (const v of [-E.camA, E.camA]) {
     const s = new THREE.Shape(); s.moveTo(Rk + 16, -3.5); s.lineTo(Rk + 16, 3.5); s.lineTo(Rk + 8.5, 0); s.closePath();
@@ -133,7 +118,6 @@ BUILD_B4.timing = function (ctx) {
     const mk = new THREE.Mesh(g, markMat); ctx.tag(mk, 'camPulley', 'timing'); out.objects.push(mk);
   }
 
-  /* ---------- ghost of the removed поз. 17 cover ---------- */
   const hullPts = [];
   sol.pulleys.forEach(p => { for (let k = 0; k < 48; k++) { const a = k / 48 * Math.PI * 2; hullPts.push([p.u + (p.R + 13) * Math.cos(a), p.v + (p.R + 13) * Math.sin(a)]); } });
   const coverGeo = G.extrudeX(G.shapeFromPts(BUILD_B4.hull(hullPts)), -212, -147, { curveSegments: 1 });

@@ -1,7 +1,3 @@
-/* charts.js — two canvas charts drawn straight from an engine's spec: the valve-timing diagram
-   (intake/exhaust lift from the real cam → valve chain, piston travel, spark or injection mark)
-   and the indicator P–V diagram. Each engine passes its own scales. Colours come from the
-   page's CSS tokens, so both themes work. */
 (function () {
 'use strict';
 const C = {};
@@ -9,13 +5,12 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 const strokeCol = { intake: '--intake', compression: '--compression', power: '--power', exhaust: '--exhaust' };
 const num = v => String(v).replace('.', ',');
 
-function alpha(col, a) {                    // works for #rrggbb tokens
+function alpha(col, a) {
   if (col[0] !== '#') return col;
   const n = parseInt(col.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-/* cfg: { E, lift(side 'in'|'ex', phaseDeg) → mm, yMax, yTicks, marker: { at, label } | { from, to, label } } */
 C.drawLift = function (cv, phase, cfg) {
   const E = cfg.E, g = cv.getContext('2d'), W = cv.width, H = cv.height;
   const L = 50, R = 18, T = 30, B = 52, pw = W - L - R, ph = H - T - B;
@@ -27,20 +22,17 @@ C.drawLift = function (cv, phase, cfg) {
   g.strokeStyle = rule; g.lineWidth = 1;
   cfg.yTicks.forEach(mm => { g.beginPath(); g.moveTo(L, Y(mm)); g.lineTo(L + pw, Y(mm)); g.stroke();
     g.fillStyle = muted; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(mm, L - 8, Y(mm)); });
-  // stroke bands
   [['intake', 'впуск'], ['compression', 'сжатие'], ['power', 'рабочий ход'], ['exhaust', 'выпуск']].forEach(([k, name], i) => {
     const c = css(strokeCol[k]);
     g.fillStyle = alpha(c, 0.18); g.fillRect(X(i * 180), T + ph + 8, pw / 4, 16);
     g.fillStyle = c; g.fillRect(X(i * 180), T + ph + 8, pw / 4, 3);
     g.fillStyle = css('--text'); g.textAlign = 'center'; g.textBaseline = 'top'; g.fillText(name, X(i * 180 + 90), T + ph + 28);
   });
-  // injection band (diesel): drawn under the curves
   const mk = cfg.marker;
   if (mk && mk.from !== undefined) {
     g.fillStyle = alpha(accent.startsWith('#') ? accent : '#cf4413', 0.16);
     g.fillRect(X(mk.from), T, X(mk.to) - X(mk.from), ph);
   }
-  // TDC / BDC
   g.setLineDash([4, 4]); g.strokeStyle = inkA(0.35);
   [0, 180, 360, 540, 720].forEach((a, k) => {
     g.beginPath(); g.moveTo(X(a), T - 4); g.lineTo(X(a), T + ph); g.stroke();
@@ -48,7 +40,6 @@ C.drawLift = function (cv, phase, cfg) {
     g.fillText(k % 2 ? 'НМТ' : 'ВМТ', X(a), T - 6);
   });
   g.setLineDash([]);
-  // piston travel (0 at TDC = top of the plot)
   g.strokeStyle = inkA(0.55); g.lineWidth = 1.6; g.beginPath();
   for (let a = 0; a <= 720; a += 4) {
     const psi = (a % 360) * Math.PI / 180;
@@ -57,7 +48,6 @@ C.drawLift = function (cv, phase, cfg) {
     a ? g.lineTo(X(a), y) : g.moveTo(X(a), y);
   }
   g.stroke();
-  // valve lifts
   for (const [s, col] of [['in', cIn], ['ex', cEx]]) {
     g.beginPath(); g.moveTo(X(0), Y(0));
     for (let a = 0; a <= 720; a += 2) g.lineTo(X(a), Y(cfg.lift(s, a)));
@@ -67,7 +57,6 @@ C.drawLift = function (cv, phase, cfg) {
     for (let a = 0; a <= 720; a += 2) { const y = Y(cfg.lift(s, a)); a ? g.lineTo(X(a), y) : g.moveTo(X(a), y); }
     g.strokeStyle = col; g.lineWidth = 2.6; g.stroke();
   }
-  // spark line / injection label
   if (mk) {
     g.fillStyle = accent; g.textAlign = 'center'; g.textBaseline = 'bottom';
     if (mk.at !== undefined) {
@@ -77,7 +66,6 @@ C.drawLift = function (cv, phase, cfg) {
       g.fillText(mk.label, (X(mk.from) + X(mk.to)) / 2, Y(cfg.yMax * 0.38));
     }
   }
-  // cursor
   const x = X(phase);
   g.strokeStyle = accent; g.lineWidth = 2; g.beginPath(); g.moveTo(x, T - 2); g.lineTo(x, T + ph + 4); g.stroke();
   for (const [s, col] of [['in', cIn], ['ex', cEx]]) {
@@ -88,7 +76,6 @@ C.drawLift = function (cv, phase, cfg) {
   g.fillText('подъём, мм', 0, 0); g.restore();
 };
 
-/* cfg: { E, vMax, vTicks, pLo, pHi, pTicks } — V in cm³, P in bar (log scale) */
 C.drawPV = function (cv, state, cfg) {
   const E = cfg.E, g = cv.getContext('2d'), W = cv.width, H = cv.height;
   const L = 64, R = 18, T = 20, B = 50, pw = W - L - R, ph = H - T - B;

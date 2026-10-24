@@ -1,8 +1,3 @@
-/* b4/build-air.js — поз. 22 intake: plenum over the crankcase with the throttle body at the front,
-   four runners arching over to the head flanges (as in the cross-section); поз. 23 injectors in
-   the runners aimed at the intake valves, fuel rails and the crossover line; exhaust downpipes
-   from the bottom of each head into a collector per bank running back under the engine. The
-   tubes double as the flow paths for the gas particles. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
@@ -21,7 +16,6 @@ BUILD_B4.air = function (ctx) {
   const L = (c, a, s, lx) => BUILD_B4.local(E, c, lx || 0, a, s);
   const curve = pts => new THREE.CatmullRomCurve3(pts, false, 'centripetal');
 
-  /* ---------- поз. 22 plenum + throttle body + runners ---------- */
   const PY = 158, PX = [-112, 128];
   const plenum = G.extrudeX(G.roundRect(76, 116, 24), PX[0], PX[1], { curveSegments: 6 }); plenum.translate(0, PY, 0);
   const throttle = G.merge([G.tubeX(27, 31, -152, PX[0], 40), G.tubeX(27, 38, -158, -152, 40)]).translate(0, PY + 2, 0);
@@ -35,13 +29,11 @@ BUILD_B4.air = function (ctx) {
   }
   ghost(G.merge([plenum, throttle]), 'intake', 'intake', 24);
   ghost(G.merge(runners.concat(flanges)), 'intake', 'intake', 40);
-  // throttle plate, half open
   const plate = new THREE.CylinderGeometry(26.6, 26.6, 1.6, 40); plate.rotateZ(Math.PI / 2); plate.rotateY(0.6); plate.translate(-136, PY + 2, 0);
   const spindle = G.cylBetween(2.6, new V3(-136, PY + 2, -36), new V3(-136, PY + 2, 36), 10);
   solid(G.merge([plate, spindle]), MM.hw.alu, 'intake');
   out.flows.throttle = curve([new V3(-190, PY + 2, 0), new V3(-150, PY + 2, 0), new V3(-100, PY, 0), new V3(0, PY, 0), new V3(PX[1] - 12, PY, 0)]);
 
-  /* ---------- поз. 23 injectors (in each runner by the flange), rails, crossover ---------- */
   const injA = 40 * Math.PI / 180, inj = [], seals = [], rails = [], railEnds = { R: [], L: [] };
   for (let c = 0; c < 4; c++) {
     const C = E.cyl[c], tip = L(c, 292, 100), q = BUILD_B4.bankQuat(E, c, injA);
@@ -60,10 +52,9 @@ BUILD_B4.air = function (ctx) {
   for (const b of ['R', 'L']) {
     const [p, r] = railEnds[b].sort((u, v) => u.x - v.x), y = p.y, z = p.z;
     rails.push(G.cylX(8, p.x - 34, r.x + 30, 20).translate(0, y, z));
-    rails.push(G.cylX(10.5, p.x - 52, p.x - 34, 20).translate(0, y, z));        // pressure damper
+    rails.push(G.cylX(10.5, p.x - 52, p.x - 34, 20).translate(0, y, z));
     railEnds[b].far = new V3(r.x + 30, y, z);
   }
-  // crossover: off the rear ends of both rails, round behind the plenum
   const R0 = railEnds.R.far, L0 = railEnds.L.far, xb = PX[1] + 26;
   const cross = curve([R0, new V3(R0.x + 30, R0.y + 4, R0.z * 0.9), new V3(xb, PY + 4, -120), new V3(xb + 4, PY + 8, 0),
     new V3(xb, PY + 4, 120), new V3(L0.x + 24, L0.y + 4, L0.z * 0.9), L0]);
@@ -71,7 +62,6 @@ BUILD_B4.air = function (ctx) {
   solid(G.merge(inj), M.injector, 'injector');
   solid(G.merge(seals.concat(rails)), M.fuelRail, 'injector');
 
-  /* ---------- exhaust: downpipe per cylinder, collector per bank running back under the engine ---------- */
   const pipes = [], coll = [];
   for (const b of ['R', 'L']) {
     const zs = b === 'R' ? -1 : 1, cyls = b === 'R' ? [0, 2] : [1, 3];

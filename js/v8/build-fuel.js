@@ -1,7 +1,3 @@
-/* v8/build-fuel.js — поз. 8 V-type injection pump in the vee (ghost housing; its camshaft with
-   8 lobes turns at −½ crank speed off the camshaft gear; 8 tappets + plungers + springs moving
-   with the exact lobe lift), поз. 39 high-pressure lines that light up while their plunger is
-   delivering, поз. 38 injectors (4-hole nozzles aimed into the piston bowl). */
 (function () {
 'use strict';
 window.BUILD_V8 = window.BUILD_V8 || {};
@@ -15,7 +11,6 @@ BUILD_V8.fuel = function (ctx) {
   const dirV = c => { const a = E.pumpPlunger(c).dir; return new V3(0, Math.cos(a), Math.sin(a)); };
   const pumpPt = (c, r) => dirV(c).multiplyScalar(r).add(new V3(E.pumpPlunger(c).x, E.pumpY, 0));
 
-  /* ---------- pump rotor: camshaft + drive shaft + coupling (turns at −κθ) ---------- */
   const rotor = new THREE.Group();
   rotor.position.set(0, E.pumpY, 0);
   const shaftG = [G.cylX(12, Pp.x0 + 6, Pp.x1, 24), G.cylX(14, Pp.x1, E.gearX - 10, 24)];
@@ -37,12 +32,11 @@ BUILD_V8.fuel = function (ctx) {
   out.rotor = rotor;
   out.objects.push(rotor);
 
-  /* ---------- housing (ghost): V-shaped section extruded along the shaft + governor ---------- */
-  const dR = [Math.cos(-Pp.rowAngle), Math.sin(-Pp.rowAngle)], pR = [-dR[1], dR[0]];      // pR points to the vee centre
+  const dR = [Math.cos(-Pp.rowAngle), Math.sin(-Pp.rowAngle)], pR = [-dR[1], dR[0]];
   const top = 116, half = 23;
   const corner = (d, p, r, k) => [d[0] * r + p[0] * k, d[1] * r + p[1] * k];
   const outline = [];
-  outline.push([half / Math.sin(Pp.rowAngle), 0]);                                       // inner edges meet on the centre line
+  outline.push([half / Math.sin(Pp.rowAngle), 0]);
   outline.push(corner(dR, pR, top, half));
   outline.push(corner(dR, pR, top, -half));
   const outerR = corner(dR, pR, 44, -half), a0 = Math.atan2(outerR[1], outerR[0]), rr = Math.hypot(outerR[0], outerR[1]);
@@ -62,7 +56,6 @@ BUILD_V8.fuel = function (ctx) {
   out.objects.push(hMesh, hEdges);
   out.ghost = [MM.ghost.pump];
 
-  /* ---------- plunger units (static barrels + moving tappets, plungers, springs) ---------- */
   const barrel = G.merge([
     G.lathe([[6.2, 74], [12, 74], [12, 104], [10, 104], [10, 112], [6.2, 112], [6.2, 74]], 28, 0, undefined, true),
     (() => { const h = G.hexPrism(19, 8); h.translate(0, 112, 0); return h; })(),
@@ -80,7 +73,6 @@ BUILD_V8.fuel = function (ctx) {
   }
   out.objects.push(solid(G.merge(barrels), M.plunger, 'injPump'), iTap, iPl, iSp);
 
-  /* ---------- поз. 38 injectors ---------- */
   const tilt = 15 * DEG;
   const injGeo = G.merge([
     G.lathe([[0, 0], [2.2, 0.6], [3.2, 2.5], [3.6, 6], [4.6, 7], [4.6, 22], [10, 22], [11, 24], [11, 50], [10, 52], [12.5, 52],
@@ -98,11 +90,10 @@ BUILD_V8.fuel = function (ctx) {
   }
   out.objects.push(solid(G.merge(injs), M.injector, 'injector'));
 
-  /* ---------- поз. 39 high-pressure lines + delivery pulse ---------- */
   const pulseMat = [];
   const lineGeos = [];
   for (let c = 0; c < 8; c++) {
-    const C = E.cyl[c], xp = E.pumpPlunger(c).x, sz = C.sgn;                       // sz: +1 right bank (−Z)
+    const C = E.cyl[c], xp = E.pumpPlunger(c).x, sz = C.sgn;
     const fit = (a, s) => BUILD_V8.local(E, c, 0, a, s);
     const ia = E.fireFace - 2 + 128 * Math.cos(tilt) - 26 * Math.sin(tilt), is = -2 + 128 * Math.sin(tilt) + 26 * Math.cos(tilt);
     const lerp = t => C.x + (xp - C.x) * t;
@@ -118,7 +109,6 @@ BUILD_V8.fuel = function (ctx) {
   }
   out.objects.push(solid(G.merge(lineGeos), M.hpLine, 'hpLines'));
 
-  /* ---------- update ---------- */
   const m4 = new THREE.Matrix4(), one = new V3(1, 1, 1), scl = new V3(1, 1, 1), qs = [];
   for (let c = 0; c < 8; c++) qs.push(qOf(c));
   out.plunger = new Float32Array(8);
@@ -131,7 +121,6 @@ BUILD_V8.fuel = function (ctx) {
       m4.compose(pumpPt(c, Pp.base + L), qs[c], one); iTap.setMatrixAt(c, m4); iPl.setMatrixAt(c, m4);
       scl.set(1, (32 - L) / 32, 1);
       m4.compose(pumpPt(c, Pp.base + 20 + L), qs[c], scl); iSp.setMatrixAt(c, m4);
-      // the line is pressurised from the start of delivery until the nozzle closes
       const ph = E.phaseOf(c, deg), d0 = E.inject.start - 6, d1 = E.inject.end;
       const on = ph >= d0 && ph <= d1 ? Math.sin(Math.PI * (ph - d0) / (d1 - d0)) : 0;
       pulseMat[c].opacity = 0.9 * on;

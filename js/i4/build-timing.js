@@ -1,9 +1,3 @@
-/* build-timing.js — поз. 22 toothed belt (137 teeth on the exact solved path), поз. 21
-   tensioner roller on its arm, поз. 25 coolant pump (toothed pulley in the belt + volute on
-   the block), and an optional ghost timing cover.
-   Belt speed = θ·R(crank); every pulley turns at R(crank)/R(pulley) of the crank, so the cams
-   get exactly 23/46 = ½. Pulley groove phases are chosen so a belt tooth sits in a groove at
-   θ = 0 — the kinematics then keep them meshed at every angle. */
 (function () {
 'use strict';
 window.BUILD_I4 = window.BUILD_I4 || {};
@@ -31,7 +25,6 @@ BUILD_I4.timing = function (ctx) {
   const out = {};
   const L = path.length, X0 = E.beltX - E.beltW / 2, X1 = E.beltX + E.beltW / 2;
 
-  /* ---------- belt band (backing): a closed rectangular strip along the pitch line ---------- */
   const nS = Math.round(L / 2);
   const pos = [], nor = [], idx = [];
   const ring = [];
@@ -41,10 +34,9 @@ BUILD_I4.timing = function (ctx) {
     const outer = [q.u - q.nu * E.beltBack, q.v - q.nv * E.beltBack];
     ring.push({ inner, outer, nu: q.nu, nv: q.nv });
   }
-  // 4 faces × 2 verts per sample, each face with its own normals
   const faces = [
-    s => [[X0, ...s.outer], [X1, ...s.outer], [0, -s.nu, -s.nv]],     // back of the belt
-    s => [[X1, ...s.inner], [X0, ...s.inner], [0, s.nu, s.nv]],       // tooth side
+    s => [[X0, ...s.outer], [X1, ...s.outer], [0, -s.nu, -s.nv]],
+    s => [[X1, ...s.inner], [X0, ...s.inner], [0, s.nu, s.nv]],
     s => [[X0, ...s.inner], [X0, ...s.outer], [-1, 0, 0]],
     s => [[X1, ...s.outer], [X1, ...s.inner], [1, 0, 0]],
   ];
@@ -57,34 +49,30 @@ BUILD_I4.timing = function (ctx) {
     });
     for (let k = 0; k < nS; k++) {
       const a = base + k * 2, b = base + ((k + 1) % nS) * 2;
-      idx.push(a, b + 1, a + 1, a, b, b + 1);      // (B−A)×t must point along the face normal
+      idx.push(a, b + 1, a + 1, a, b, b + 1);
     }
   });
-  // positions were written as (X, u, v) = (X, Y, Z) — already world order
   const band = new THREE.BufferGeometry();
   band.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   band.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   band.setIndex(idx);
   const bandMat = M.belt.clone(); bandMat.side = THREE.DoubleSide; bandMat.userData.key = 'belt';
-  M.beltBand = bandMat;            // keep palette updates in sync (see engine.js)
+  M.beltBand = bandMat;
   const bandMesh = new THREE.Mesh(band, bandMat);
   ctx.tag(bandMesh, 'belt', 'timing');
   bandMesh.castShadow = bandMesh.receiveShadow = true;
 
-  /* ---------- teeth: one instanced tooth, 137 copies riding the path ---------- */
   const ts = new THREE.Shape();
   ts.moveTo(-2.6, -0.2); ts.lineTo(2.6, -0.2); ts.lineTo(1.85, E.toothH - 0.9);
   ts.quadraticCurveTo(1.5, E.toothH, 0, E.toothH); ts.quadraticCurveTo(-1.5, E.toothH, -1.85, E.toothH - 0.9);
   ts.closePath();
   const tg = new THREE.ExtrudeGeometry(ts, { depth: E.beltW, bevelEnabled: false, curveSegments: 4 });
-  // shape (x=tangent, y=height, z=width) → tooth local (X=width, Y=height, Z=−tangent)
   tg.applyMatrix4(new THREE.Matrix4().set(0, 0, 1, -E.beltW / 2, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1));
   const teeth = new THREE.InstancedMesh(tg, M.beltTooth, sol.N);
   teeth.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   ctx.tag(teeth, 'belt', 'timing');
   teeth.castShadow = teeth.receiveShadow = true;
 
-  /* ---------- поз. 21 tensioner: roller, arm, pivot ---------- */
   const tp = sol.pulleys.find(p => p.key === 'tens'), T = E.tensioner;
   const tens = new THREE.Group();
   tens.position.set(E.beltX, tp.u, tp.v);
@@ -98,7 +86,6 @@ BUILD_I4.timing = function (ctx) {
   const spin = new THREE.Group();
   spin.add(rollerMesh);
   tens.add(spin);
-  // bearing inner race, washer and bolt: fixed to the arm
   const hub = new THREE.Mesh(G.merge([
     G.tubeX(5, 8.5, -13, 13, 32),
     G.tubeX(5, 12, -15.5, -13, 32),
@@ -106,7 +93,6 @@ BUILD_I4.timing = function (ctx) {
   ]), M.tensArm);
   ctx.tag(hub, 'tensioner', 'timing');
   tens.add(hub);
-  // arm: rounded slot from the pivot to the roller centre, behind the belt plane
   const du = tp.u - T.pivot.u, dv = tp.v - T.pivot.v, len = Math.hypot(du, dv), ang = Math.atan2(dv, du);
   const arm = new THREE.Shape();
   arm.absarc(0, 0, 13, Math.PI / 2, Math.PI * 1.5, false);
@@ -123,7 +109,6 @@ BUILD_I4.timing = function (ctx) {
   ctx.tag(armMesh, 'tensioner', 'timing');
   [rollerMesh, hub, armMesh].forEach(m => { m.castShadow = m.receiveShadow = true; });
 
-  /* ---------- поз. 25 coolant pump: toothed pulley in the belt + volute on the block ---------- */
   const pp = sol.pulleys.find(p => p.key === 'pump');
   const pump = new THREE.Group();
   pump.position.set(0, pp.u, pp.v);
@@ -139,14 +124,13 @@ BUILD_I4.timing = function (ctx) {
   const volute = G.merge([
     G.tubeX(0, 50, -203, -184, 64),
     G.tubeX(0, 30, -207, -203, 48),
-    (() => { const g = G.cylBetween(13, new V3(-193, 0, 40), new V3(-193, -38, 74), 24); return g; })(),   // outlet spigot
+    (() => { const g = G.cylBetween(13, new V3(-193, 0, 40), new V3(-193, -38, 74), 24); return g; })(),
   ]);
   const pumpBody = new THREE.Mesh(volute, M.pumpBody);
   ctx.tag(pumpBody, 'coolantPump', 'aux');
   pumpBody.castShadow = pumpBody.receiveShadow = true;
   pump.add(pumpBody);
 
-  /* ---------- ghost timing cover (hidden unless asked for) ---------- */
   const hullPts = [];
   sol.pulleys.forEach(p => { for (let k = 0; k < 48; k++) { const a = k / 48 * Math.PI * 2; hullPts.push([p.u + (p.R + 14) * Math.cos(a), p.v + (p.R + 14) * Math.sin(a)]); } });
   const hull = convexHull(hullPts);
@@ -174,13 +158,13 @@ BUILD_I4.timing = function (ctx) {
       teeth.setMatrixAt(j, m4);
     }
     teeth.instanceMatrix.needsUpdate = true;
-    spin.rotation.x = -theta * Rc / T.R;              // back-side roller turns the other way
+    spin.rotation.x = -theta * Rc / T.R;
     pumpSpin.rotation.x = theta * Rc / Rp;
   };
   return out;
 };
 
-function convexHull(pts) {                 // monotone chain
+function convexHull(pts) {
   const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
   const lo = [], hi = [];

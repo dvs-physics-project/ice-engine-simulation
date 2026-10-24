@@ -1,9 +1,3 @@
-/* b4/build-gas.js — the working gas: each cylinder's charge between the piston crown and the pent
-   roof (colour = temperature, density = pressure), the spark at the plug gap at 10° before TDC,
-   the flame that follows, and flow particles: throttle → plenum → runner → port → valve throat,
-   and valve throat → exhaust port → downpipe → collector. A particle advances only while — and
-   as fast as — the real valve lift lets the gas through; motion follows Δθ, so scrubbing the
-   crank backwards runs the flow backwards. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
@@ -30,7 +24,6 @@ BUILD_B4.gas = function (ctx, vt, air, sparkTips) {
   const E = ctx.E, DEG = Math.PI / 180;
   const out = { chambers: [], objects: [] };
 
-  /* ---------- chambers, in the bank frame: top cap on the pent roof, wall, floor on the crown ---------- */
   const R = E.bore / 2 - 0.4, K = 56, RINGS = 6;
   const tI = Math.tan(E.vt.in.angle), tE = Math.tan(E.vt.ex.angle);
   const roof = s => Math.max(E.fireFace, E.ridgeA - (s >= 0 ? s * tI : -s * tE));
@@ -65,7 +58,6 @@ BUILD_B4.gas = function (ctx, vt, air, sparkTips) {
     out.chambers.push({ mesh, geo, mat, floor, state: null });
   }
 
-  /* ---------- spark at the plug gap, flame kernel, one shared flash light ---------- */
   const sparkTex = glowTexture([[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(190,220,255,0.9)'], [0.6, 'rgba(120,160,255,0.25)'], [1, 'rgba(120,160,255,0)']]);
   const flameTex = glowTexture([[0, 'rgba(255,250,220,1)'], [0.3, 'rgba(255,190,90,0.85)'], [0.7, 'rgba(255,110,40,0.3)'], [1, 'rgba(255,90,30,0)']]);
   const sprite = (tex, p, c) => {
@@ -77,7 +69,6 @@ BUILD_B4.gas = function (ctx, vt, air, sparkTips) {
   out.flash = new THREE.PointLight(0xffb066, 0, 340, 2);
   out.objects.push(out.flash);
 
-  /* ---------- flow particles ---------- */
   const parts = [], rnd = s => (Math.random() - 0.5) * s;
   for (let c = 0; c < 4; c++) for (let j = 0; j < 2; j++) {
     for (let k = 0; k < 9; k++) parts.push({ kind: 'in', c, j, curve: vt.ports.in[c][j], t: (k + Math.random() * 0.6) / 9, jit: new V3(rnd(7), rnd(7), rnd(7)) });
@@ -126,7 +117,6 @@ BUILD_B4.gas = function (ctx, vt, air, sparkTips) {
       ch.mat.color.setRGB(col[0], col[1], col[2]).convertSRGBToLinear();
       ch.mat.opacity = 0.16 + 0.5 * Math.max(0, Math.min(1, (Math.log10(st.P) - lo) / (hi - lo)));
       ch.state = st;
-      // spark from E.spark for a few degrees; the flame kernel grows after it and burns into the expansion
       const d = st.phase - E.spark;
       const on = d >= 0 && d < sparkLen ? Math.pow(1 - d / sparkLen, 1.2) : 0;
       out.sparks[c].material.opacity = on; out.sparks[c].scale.setScalar(20 + 40 * on);

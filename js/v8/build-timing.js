@@ -21,8 +21,8 @@ BUILD_V8.timing = function (ctx) {
   const axle = new THREE.Group();
   axle.position.copy(idler.position);
   axle.add(solid(G.merge([
-    G.cylX(21.9, 360 - E.gearX, w + 3, 32),                                // stub axle from the block face
-    G.tubeX(8, 30, w + 3, w + 7, 40),                                      // retaining washer
+    G.cylX(21.9, 360 - E.gearX, w + 3, 32),
+    G.tubeX(8, 30, w + 3, w + 7, 40),
     (() => { const b = G.hexPrism(17, 7); G.toX(b); b.translate(w + 7, 0, 0); return b; })(),
   ]), MM.hw.steel, 'idlerGear'));
   out.idler = idler;

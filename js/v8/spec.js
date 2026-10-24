@@ -1,13 +1,3 @@
-/* v8/spec.js — V-образный 8-цилиндровый дизель по чертежу «ДВС КР 09.00.00.00 СБ»
-   (развал 90°, компоновка семейства КамАЗ-740), в миллиметрах. Pure math, no THREE/DOM.
-   One source of truth for geometry, animation and charts: crank–slider for both banks,
-   firing order, flat-tappet cam law, the exact rocker-arm solution (valve lift = f(cam lift)),
-   rear gear train with tooth phasing, front V-belt, injection-pump timing, dual diesel cycle.
-
-   World axes (mm): X along the crankshaft, front (fan) at −X, flywheel at +X; Y up, crank axis
-   at Y=0; Z across. Right bank (cyl 1–4) leans to −Z, left bank (cyl 5–8) to +Z.
-   Positive rotation about +X turns +Y toward +Z — clockwise seen from the fan end.
-   Bank frame for cylinder c: a = along its axis (0 at the crank), s = sideways toward the vee. */
 (function (root) {
 'use strict';
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
@@ -15,14 +5,13 @@ const mod = (a, m) => ((a % m) + m) % m;
 const wrapPi = a => mod(a + Math.PI, TAU) - Math.PI;
 const E = { id: 'v8', DEG, TAU, mod, wrapPi };
 
-/* ------------------------------------------------------------ cranktrain ---- */
 E.bore = 125;  E.stroke = 130;  E.r = 65;  E.rodLen = 250;  E.compH = 99;
 E.pitch = 170;
 E.mainX = [-2, -1, 0, 1, 2].map(k => k * E.pitch);
 E.pinX = [-1.5, -0.5, 0.5, 1.5].map(k => k * E.pitch);
-E.bankOff = 18.5;                      // each rod's big end sits ±18.5 mm from the pin centre
+E.bankOff = 18.5;
 E.mainD = 95;  E.mainW = 40;  E.pinD = 80;  E.pinLen = 74;  E.webT = 28;
-E.rodW = 36;   E.rodBig = 85;            // big-end bore incl. shells
+E.rodW = 36;   E.rodBig = 85;
 E.pistonR = 62.3;  E.pistonH = 140;  E.pinOD = 50;  E.pinID = 28;
 E.deck = 413.5;  E.gasket = 1.5;  E.fireFace = E.deck + E.gasket;
 E.headTop = 520;
@@ -40,7 +29,6 @@ E.bankPoint = function (c, x, a, s) {
   const A = E.axisOf(c), N = E.vSideOf(c);
   return [x, a * A.y + s * N.y, a * A.z + s * N.z];
 };
-// pins 1&4 and 2&3 opposite, the two pairs 90° apart (cross-plane crank)
 E.pinAngle = [-45, 45, -135, 135].map(d => d * DEG);
 
 E.kin = function (c, theta) {
@@ -56,22 +44,18 @@ E.kin = function (c, theta) {
   };
 };
 
-/* firing order 1-5-4-2-6-3-7-8, one firing every 90°. Cycle phase 0 = TDC at the start of
-   intake, 360 = TDC firing. phase_c(θ) = θ + cycleOff[c]. */
 E.firing = [1, 5, 4, 2, 6, 3, 7, 8];
 E.cycleOff = [0, 0, 0, 0, 0, 0, 0, 0];
 E.firing.forEach((n, k) => { E.cycleOff[n - 1] = mod(360 - 90 * k, 720); });
 E.phaseOf = (c, thetaDeg) => mod(thetaDeg + E.cycleOff[c], 720);
 
-/* ------------------------------------------------------------ valvetrain ---- */
-E.camY = 168;                          // camshaft in the vee, above the crank
-E.camA = E.camY * Math.SQRT1_2;        // its position in either bank's frame (a = s)
+E.camY = 168;
+E.camA = E.camY * Math.SQRT1_2;
 E.camS = E.camA;
-E.kappa = 0.5;                         // cam turns with the crank (via an idler), half speed
+E.kappa = 0.5;
 E.camBase = 22;  E.camH = 8.5;  E.lobeW = 16;  E.camJournalR = 27;
-E.camBeta = { in: 65.6 * DEG, ex: 69.4 * DEG };   // half-duration, cam degrees
-E.peak = { in: 108, ex: 602 };                    // cycle phase of peak lift
-// впуск: открытие 13° до ВМТ, закрытие 49° после НМТ; выпуск: 66° до НМТ … 10° после ВМТ
+E.camBeta = { in: 65.6 * DEG, ex: 69.4 * DEG };
+E.peak = { in: 108, ex: 602 };
 E.timingText = { in: [-13, 229], ex: [474, 730] };
 E.valveDX = 30;  E.valveS = 20;
 E.valveHeadR = { in: 23, ex: 20 };
@@ -81,14 +65,12 @@ E.tappetLen = 62;  E.tappetFaceR = 16;  E.tappetStemR = 10.5;
 E.pushTop0 = 566;
 E.pushBot0 = E.camA + E.camBase + E.tappetLen;
 E.pushLen = E.pushTop0 - E.pushBot0;
-E.rockerP = { a: 578, s: E.valveS + (E.camS - E.valveS) * 0.6 };   // 1.5 : 1 lever, pivot level with the valve pad
+E.rockerP = { a: 578, s: E.valveS + (E.camS - E.valveS) * 0.6 };
 E.rockerT0 = { a: E.pushTop0, s: E.camS };
-E.padR = 9;                            // rocker pad: arc of R9 whose centre is V0, rolling on the stem tip
+E.padR = 9;
 E.rockerV0 = { a: E.valveTipA + E.padR, s: E.valveS };
 E.pocketDepth = 4;
 
-// intake on the front side of a right-bank cylinder; the left bank uses the same head turned
-// round, so its intake is at the rear. Each valve's lobe, tappet, pushrod and rocker share its X.
 E.valveX = function (c, side) {
   const C = E.cyl[c], front = (side === 'in') === (C.bank === 'R');
   return C.x + (front ? -E.valveDX : E.valveDX);
@@ -104,7 +86,6 @@ E.liftLawD = function (rel, beta) {
   if (Math.abs(u) >= 1) return 0;
   return -4 * E.camH * u * (1 - u * u) / beta;
 };
-// flat-follower envelope: support function in direction t is exactly base + lift(t)
 E.lobeProfile = function (beta, n) {
   n = n || 240;
   const pts = [];
@@ -121,9 +102,6 @@ E.lobeAngle = function (c, side) {
 E.camLiftAt = (c, side, theta) => E.liftLaw(E.lobeAngle(c, side) + E.kappa * theta - E.cyl[c].beta, E.camBeta[side]);
 E.camLiftAtPhase = (side, phaseDeg) => E.liftLaw((phaseDeg - E.peak[side]) * DEG * E.kappa, E.camBeta[side]);
 
-/* exact rocker: the pushrod is a rigid link between the tappet socket (moving along the bank
-   axis) and the adjusting-screw ball on the rocker's short arm. Solve the rocker angle φ for a
-   given cam lift h, then read the valve displacement off the long arm. */
 const rot = (v, f) => ({ s: v.s * Math.cos(f) - v.a * Math.sin(f), a: v.s * Math.sin(f) + v.a * Math.cos(f) });
 E.rockerAt = function (h) {
   const P = E.rockerP, T0 = { s: E.rockerT0.s - P.s, a: E.rockerT0.a - P.a };
@@ -146,7 +124,6 @@ E.valveLiftMax = E.rocker(E.camH).valve;
 E.valveLiftAt = (c, side, theta) => E.rocker(E.camLiftAt(c, side, theta)).valve;
 E.valveLiftAtPhase = (side, phaseDeg) => E.rocker(E.camLiftAtPhase(side, phaseDeg)).valve;
 
-/* ------------------------------------------------------------ rear gear train ---- */
 E.gearX = 375;  E.gearW = 24;  E.module = 4;
 E.gears = {
   crank: { z: 24, y: 0, zc: 0 },
@@ -158,12 +135,11 @@ E.gears = {
   const g = E.gears, m = E.module, R = k => m * g[k].z / 2;
   const d1 = R('crank') + R('idler'), d2 = R('idler') + R('cam');
   const y = (d1 * d1 - d2 * d2 + E.camY * E.camY) / (2 * E.camY);
-  g.idler.y = y; g.idler.zc = -Math.sqrt(d1 * d1 - y * y);           // idler on the right-bank side
+  g.idler.y = y; g.idler.zc = -Math.sqrt(d1 * d1 - y * y);
   g.pump.y = E.camY + R('cam') + R('pump');
 })();
 E.pumpY = E.gears.pump.y;
 E.gearRatio = { crank: 1, idler: -E.gears.crank.z / E.gears.idler.z, cam: E.kappa, pump: -E.kappa };
-// phase each gear so a tooth of one faces a gap of the other at every mesh
 E.meshPhase = function (p1, z1, c1, c2, z2) {
   const ang12 = Math.atan2(c2.zc - c1.zc, c2.y - c1.y), ang21 = ang12 + Math.PI;
   const tau1 = mod((ang12 - p1) / (TAU / z1), 1);
@@ -176,16 +152,15 @@ E.meshPhase = function (p1, z1, c1, c2, z2) {
   g.cam.phase = E.meshPhase(g.idler.phase, g.idler.z, g.idler, g.cam, g.cam.z);
   g.pump.phase = E.meshPhase(g.cam.phase, g.cam.z, g.cam, g.pump, g.pump.z);
 })();
-E.front = { gearX: -377, gearZ: 46, oilPumpY: -184 };   // crank → oil-pump drive gears (1 : 1)
+E.front = { gearX: -377, gearZ: 46, oilPumpY: -184 };
 
-/* ------------------------------------------------------------ injection pump ---- */
 E.pump = { x0: -110, x1: 190, rowAngle: 37.5 * DEG, base: 22, lift: 8, beta: 70 * DEG, peak: 372,
   plungerX: [-55, -15, 25, 65].map(x => x + 10), lobeW: 14, plungerR: 6, tappetR: 13 };
-E.pumpPlunger = function (c) {          // plunger of cylinder c: its X and direction (pump frame)
+E.pumpPlunger = function (c) {
   const C = E.cyl[c];
   return { x: E.pump.plungerX[C.k] + (C.bank === 'R' ? -12 : 12), dir: C.bank === 'R' ? -E.pump.rowAngle : E.pump.rowAngle };
 };
-E.pumpLobeAngle = function (c) {        // pump shaft turns at −κθ (meshes with the cam gear)
+E.pumpLobeAngle = function (c) {
   const thetaPk = mod(E.pump.peak - E.cycleOff[c], 720) * DEG;
   return E.pumpPlunger(c).dir + E.kappa * thetaPk;
 };
@@ -200,7 +175,7 @@ E.pumpLawD = function (rel) {
   if (Math.abs(u) >= 1) return 0;
   return -4 * E.pump.lift * u * (1 - u * u) / E.pump.beta;
 };
-E.pumpLobeProfile = function (n) {      // same flat-follower envelope as the camshaft lobes
+E.pumpLobeProfile = function (n) {
   n = n || 200;
   const pts = [];
   for (let k = 0; k < n; k++) {
@@ -210,18 +185,17 @@ E.pumpLobeProfile = function (n) {      // same flat-follower envelope as the ca
   return pts;
 };
 E.plungerLift = (c, theta) => E.pumpLaw(E.pumpLobeAngle(c) - E.kappa * theta - E.pumpPlunger(c).dir);
-E.inject = { start: 344, end: 368 };    // впрыск: ≈16° до ВМТ … 8° после
+E.inject = { start: 344, end: 368 };
 E.injectAt = phaseDeg => phaseDeg >= E.inject.start && phaseDeg <= E.inject.end;
 
-/* ------------------------------------------------------------ front V-belt ---- */
 E.beltX = -470;
-E.vbelt = [                              // CCW travel order (verified numerically)
+E.vbelt = [
   { key: 'alt', u: 150, v: -232, R: 40, side: 1 },
   { key: 'fan', u: 262, v: 0, R: 95, side: 1 },
   { key: 'crank', u: 0, v: 0, R: 95, side: 1 },
 ];
 E.fanY = 262;  E.fanSlip = 0.97;
-E.beltPath = function (P) {             // exact external tangents, same method as the I4 belt
+E.beltPath = function (P) {
   const n = P.length, tan = [];
   for (let k = 0; k < n; k++) {
     const a = P[k], b = P[(k + 1) % n], r1 = a.side * a.R, r2 = b.side * b.R;
@@ -255,7 +229,6 @@ E.beltSample = function (path, s) {
   return { u: p.u + p.R * Math.cos(a), v: p.v + p.R * Math.sin(a), tu: -Math.sin(a), tv: Math.cos(a) };
 };
 
-/* ------------------------------------------------------------ dual (mixed) diesel cycle ---- */
 const Bm = E.bore / 1000, Sm = E.stroke / 1000, Lm = E.rodLen / 1000, rm = Sm / 2;
 E.CR = 17;
 E.Ap = Math.PI * Bm * Bm / 4;

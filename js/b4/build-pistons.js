@@ -1,14 +1,7 @@
-/* b4/build-pistons.js — поз. 4 pistons Ø83 (flat crown with the four valve reliefs cut 2.6 mm
-   deep, the assembly arrow pointing at the timing drive), rings, floating pins Ø23; four rods
-   (143.5 mm centres, I-beam, bolted caps with nuts) each on its own crank pin, big-end shells.
-   Pistons are built in the bank-local frame (x along the crank, y = a out along the bore, z = s
-   up) and placed by the bank quaternion; the left bank's copies are the same parts turned 180°
-   about the vertical. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
 
-// outline of the union of two overlapping discs (star-shaped from any point of their lens)
 function unionOutline(c1, r1, c2, r2, n) {
   const dx = c2[0] - c1[0], dy = c2[1] - c1[1], d = Math.hypot(dx, dy);
   const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d), P = [c1[0] + dx / d * a, c1[1] + dy / d * a];
@@ -22,11 +15,9 @@ function unionOutline(c1, r1, c2, r2, n) {
 
 function pistonGeometries(E) {
   const R = E.pistonR, H = E.pistonH, top = -E.pocketDepth, g = {};
-  // body under the crown plate: ring grooves, full skirt, hollow underside
   g.body = G.lathe([[0, top], [R - 0.4, top], [R, top - 0.5], [R, -5.1], [R - 3.2, -5.1], [R - 3.2, -6.4], [R, -6.4],
     [R, -9.6], [R - 3.2, -9.6], [R - 3.2, -10.9], [R, -10.9], [R, -14.1], [R - 3.6, -14.1], [R - 3.6, -16.9], [R, -16.9],
     [R, -H + 0.8], [R - 0.8, -H], [R - 3.4, -H], [R - 3.4, -20], [27, -12], [0, -11]], 64, 0, undefined, true);
-  // crown plate with the valve reliefs: intake and exhaust reliefs of one side run together
   const pocket = { in: { s: 14.8, r: 17.0 }, ex: { s: -14.2, r: 14.8 } };
   const crown = new THREE.Shape(); crown.absarc(0, 0, R - 0.4, 0, Math.PI * 2, false);
   for (const xs of [-1, 1]) {
@@ -35,8 +26,7 @@ function pistonGeometries(E) {
     crown.holes.push(h);
   }
   g.crown = new THREE.ExtrudeGeometry(crown, { depth: E.pocketDepth, bevelEnabled: false, curveSegments: 64 });
-  g.crown.rotateX(Math.PI / 2);                      // shape (x, s) → local (x, ·, s); plate spans y = −2.6 … 0
-  // pin bosses (bored through) and the struts under the crown
+  g.crown.rotateX(Math.PI / 2);
   const parts = [];
   for (const s of [-1, 1]) {
     const b = G.tubeX(E.pinOD / 2 + 0.05, 15, s < 0 ? -(R - 3.6) : 11, s < 0 ? -11 : R - 3.6, 32); b.translate(0, -E.compH, 0); parts.push(b);
@@ -49,14 +39,12 @@ function pistonGeometries(E) {
   G.toX(pin); pin.translate(-35, -E.compH, 0);
   const clip = new THREE.TorusGeometry(11.2, 0.8, 6, 28); clip.rotateY(Math.PI / 2);
   g.pin = G.merge([pin, clip.clone().translate(-35.8, -E.compH, 0), clip.translate(35.8, -E.compH, 0)]);
-  // assembly arrow, pointing at the timing drive (local −x on the right bank)
   const ar = G.shapeFromPts([[-8, 0], [-3, 3.4], [-3, 1.2], [8, 1.2], [8, -1.2], [-3, -1.2], [-3, -3.4]]);
   g.arrowR = new THREE.ShapeGeometry(ar); g.arrowR.rotateX(-Math.PI / 2); g.arrowR.translate(0, 0.06, 0);
   g.arrowL = g.arrowR.clone(); g.arrowL.rotateY(Math.PI);
   return g;
 }
 
-/* rod in its own frame: origin = big-end centre, +Y toward the small end, X = crank axis */
 function rodGeometries(E) {
   const L = E.rodLen, rb = E.rodBig / 2, g = {};
   const key = [[34, 14], [48, 12], [80, 10.6], [L - 22, 9.4]];
@@ -80,7 +68,7 @@ function rodGeometries(E) {
   parts.push(G.extrudeX(G.shapeFromPts(be), -E.rodW / 2, E.rodW / 2, { bevelEnabled: true, bevelThickness: 0.8, bevelSize: 0.7, bevelSegments: 1, curveSegments: 12 }));
   const eye = new THREE.Shape(); eye.absarc(L, 0, eyeR, 0, Math.PI * 2, false); eye.holes.push(G.circlePath(L, 0, 13.5, true));
   parts.push(G.extrudeX(eye, -E.rodW / 2, E.rodW / 2, { bevelEnabled: true, bevelThickness: 0.8, bevelSize: 0.6, bevelSegments: 1, curveSegments: 36 }));
-  for (const s of [-1, 1]) {                                   // I-beam flanges
+  for (const s of [-1, 1]) {
     const pts = [];
     for (let y = 30; y <= L - 18; y += 4) pts.push([y, s * w(y)]);
     for (let y = L - 18; y >= 30; y -= 4) pts.push([y, s * (w(y) - 3.6)]);

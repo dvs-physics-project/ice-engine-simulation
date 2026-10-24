@@ -1,13 +1,8 @@
-/* v8/build-air.js — the gas path outside the heads: поз. 29 intake manifolds along the inner
-   (vee) side of each bank, поз. 30 exhaust manifolds along the outer side, поз. 7 two
-   turbochargers at the rear (ghost volutes, solid rotor: compressor and turbine wheels on one
-   shaft), and the pipes between them. Returns the flow paths the gas module animates. */
 (function () {
 'use strict';
 window.BUILD_V8 = window.BUILD_V8 || {};
 const V3 = THREE.Vector3;
 
-// bladed wheel: lathe hub + thin blades from a meridional (r, y) outline, leaned with height
 function wheel(blades, hubPts, bladePts, lean, yMax) {
   const parts = [G.lathe(hubPts, 48)];
   const shape = G.shapeFromPts(bladePts);
@@ -37,8 +32,6 @@ BUILD_V8.air = function (ctx) {
   const curve = pts => new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   const tube = (pts, r, seg) => new THREE.TubeGeometry(curve(pts), seg || 48, r, 16, false);
   const alongZ = (geo, z) => { geo.rotateX(Math.PI / 2); geo.translate(XT, YT, z); return geo; };
-  // turbo layout (|Z| from the engine's centre plane): compressor wheel back at 135, its volute
-  // round 137; core 163…210; turbine wheel back at 230, volute round 238, outlet 262…312
   const XT = 585, YT = 470, ZC = 135, ZTW = 230, ZTV = 238;
   out.turbo = { x: XT, y: YT };
 
@@ -47,7 +40,6 @@ BUILD_V8.air = function (ctx) {
     const pI = E.bankPoint(c0, 0, 468, 172), pE = E.bankPoint(c0, 0, 466, -128);
     const YI = pI[1], ZI = pI[2], YE = pE[1], ZE = pE[2];
 
-    /* поз. 29 intake manifold: tube along the bank, closed at the front, flanges to each port */
     const imGeo = G.merge([G.cylX(30, -350, 350, 32, true), G.cylX(30, -356, -350, 32)]);
     imGeo.translate(0, YI, ZI);
     const flanges = [];
@@ -57,7 +49,6 @@ BUILD_V8.air = function (ctx) {
     }
     ghost(G.merge([imGeo, ...flanges]), 'intake', 'intake', 35);
 
-    /* поз. 30 exhaust manifold + pipe round the back up to the turbine inlet */
     const em = G.cylX(28, -320, 330, 32, true); em.translate(0, YE, ZE);
     const capF = G.cylX(28, -326, -320, 32); capF.translate(0, YE, ZE);
     const ef = [];
@@ -71,7 +62,6 @@ BUILD_V8.air = function (ctx) {
     const downPts = [new V3(XT, YT, sz * 312), new V3(XT, YT - 30, sz * 334), new V3(XT + 40, YT - 130, sz * 346)];
     ghost(tube(downPts, 30, 24), 'exhaust', 'exhaust', 40);
 
-    /* поз. 7 turbocharger: ghost volutes + compressor outlet pipe to the manifold */
     const comp = new THREE.TorusGeometry(66, 25, 14, 48); comp.translate(XT, YT, sz * (ZC + 2));
     const compBack = alongZ(G.lathe([[0, -5], [72, -5], [72, 5], [0, 5]], 48), sz * (ZC + 9));
     const inlet = alongZ(new THREE.CylinderGeometry(36, 36, 52, 32, 1, true), sz * (ZC - 34));
@@ -81,19 +71,18 @@ BUILD_V8.air = function (ctx) {
       new V3(380, YI + 6, ZI), new V3(352, YI, ZI)];
     ghost(G.merge([comp, compBack, inlet, turb, tOut, tube(coPts, 25, 56)]), 'turbo', 'turbo', 40);
     out.objects.push(solid(G.merge([
-      alongZ(new THREE.CylinderGeometry(34, 34, 47, 32), sz * 186.5),                      // bearing housing
-      (() => { const g = new THREE.CylinderGeometry(9, 9, 60, 12); g.translate(XT, YT - 54, sz * 186.5); return g; })(),   // oil drain
-      (() => { const g = new THREE.CylinderGeometry(5, 5, 50, 12); g.translate(XT + 18, YT + 50, sz * 186.5); return g; })(),  // oil feed
+      alongZ(new THREE.CylinderGeometry(34, 34, 47, 32), sz * 186.5),
+      (() => { const g = new THREE.CylinderGeometry(9, 9, 60, 12); g.translate(XT, YT - 54, sz * 186.5); return g; })(),
+      (() => { const g = new THREE.CylinderGeometry(5, 5, 50, 12); g.translate(XT + 18, YT + 50, sz * 186.5); return g; })(),
     ]), M.turboCore, 'turbo'));
 
-    // rotor in its own frame: +Y along the shaft from the compressor towards the turbine
     const holder = new THREE.Group();
     holder.position.set(XT, YT, sz * ZC);
     holder.quaternion.setFromUnitVectors(new V3(0, 1, 0), new V3(0, 0, sz));
     const spin = new THREE.Group(); holder.add(spin);
     const cw = wheel(11, [[0, 0], [44, 0], [44, 3], [26, 10], [13, 25], [9, 34], [0, 34]],
       [[42, 3], [42, 11], [33, 21], [27, 34], [10, 34], [13, 25.5], [25, 10.5]], -0.7, 34);
-    cw.rotateX(Math.PI);                                                                   // inducer faces the air inlet
+    cw.rotateX(Math.PI);
     const tw = wheel(12, [[0, 0], [40, 0], [40, 3], [22, 12], [11, 26], [9, 30], [0, 30]],
       [[38, 3], [38, 10], [30, 20], [26, 30], [10, 30], [12, 25], [22, 11.5]], 0.45, 30);
     tw.translate(0, ZTW - ZC, 0);
@@ -103,7 +92,6 @@ BUILD_V8.air = function (ctx) {
     out.objects.push(holder);
     out.spins.push(spin);
 
-    /* flow paths for the particles */
     out.flows.intake.push(curve([new V3(XT - 150, YT + 150, 0), new V3(XT - 60, YT + 138, 0), new V3(XT, YT + 96, 0), new V3(XT, YT + 22, sz * 12),
       new V3(XT, YT, sz * 64), new V3(XT, YT, sz * (ZC - 30)), new V3(XT, YT + 34, sz * (ZC - 2)), ...coPts,
       new V3(250, YI, ZI), new V3(-340, YI, ZI)]));
@@ -111,14 +99,12 @@ BUILD_V8.air = function (ctx) {
       new V3(XT, YT, sz * 262), ...downPts]));
   }
 
-  /* air inlet crossover between the two compressors, riser to the air cleaner */
   ghost(G.merge([
     alongZ(new THREE.CylinderGeometry(36, 36, 2 * (ZC - 60), 32, 1, true), 0),
     tube([new V3(XT, YT + 20, 0), new V3(XT, YT + 96, 0), new V3(XT - 60, YT + 138, 0), new V3(XT - 150, YT + 150, 0)], 38, 32),
   ]), 'intake', 'intake', 40);
 
   out.update = function (theta) {
-    // the real rotor turns 40–50× faster than the crank; on screen it is slowed far more
     out.spins.forEach(s => { s.rotation.y = 6 * theta; });
   };
   return out;

@@ -1,15 +1,8 @@
-/* b4/build-aux.js — поз. 15 gerotor oil pump on the crank nose (ghost housing with the timing
-   mark, inner rotor on the crank, outer rotor turning 6/7 as fast), поз. 19 pickup with
-   strainer, поз. 21 oil filter and поз. 8 oil-pressure sensor under the right half of the block,
-   поз. 7 engine mounts, spark plugs with their boots in the wells. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
 const V3 = THREE.Vector3;
 
-// Gerotor pair: the outer rotor carries n+1 circular pins (radius rp on a circle Ro about its own
-// centre, offset e below the crank axis); the inner rotor (n lobes, on the crank) is the region
-// those pins never sweep while the pair turns at n : n+1 — the exact conjugate, by ray casting.
 function gerotor(n, e, Ro, rp) {
   const pins = [], inner = [], rp2 = rp * rp;
   for (let s = 0; s < 1100; s++) {
@@ -51,7 +44,6 @@ BUILD_B4.aux = function (ctx) {
   const solid = (geo, mat, part) => { const m = new THREE.Mesh(geo, mat); ctx.tag(m, part, 'aux'); m.castShadow = m.receiveShadow = true; return m; };
   const [P0, P1] = E.oilPumpX;
 
-  /* ---------- поз. 15 oil pump: ghost housing round the crank nose, gerotor, cover mark ---------- */
   const hs = G.smoothShape([[56, 0], [50, 40], [22, 60], [-30, 64], [-78, 56], [-104, 30], [-110, -18], [-96, -58], [-44, -70], [12, -62], [46, -36]], 140);
   hs.holes.push(G.circlePath(0, 0, 22.5, true));
   const hGeo = G.extrudeX(hs, P0, P1, { curveSegments: 24 });
@@ -68,11 +60,10 @@ BUILD_B4.aux = function (ctx) {
   const outerRotor = solid(G.extrudeX(outerShape, P0 + 3, P1 - 3, { curveSegments: 48 }), M.oilRotor, 'oilPump');
   const outerG = new THREE.Group(); outerG.position.set(0, -ecc, 0); outerG.add(outerRotor);
   out.fixed.push(outerG);
-  const cm = new THREE.Shape(); cm.moveTo(52, -3); cm.lineTo(52, 3); cm.lineTo(44.5, 0); cm.closePath();   // (Y, Z): 12 o'clock
+  const cm = new THREE.Shape(); cm.moveTo(52, -3); cm.lineTo(52, 3); cm.lineTo(44.5, 0); cm.closePath();
   const coverMark = new THREE.Mesh(G.extrudeX(cm, P0 - 0.8, P0), BUILD_B4.markMat());
   ctx.tag(coverMark, 'oilPump', 'aux'); out.fixed.push(coverMark);
 
-  /* ---------- поз. 19 pickup: flange under the front main, tube down to the strainer ---------- */
   const pc = new THREE.CatmullRomCurve3([new V3(-96, -110, 32), new V3(-92, -140, 30), new V3(-78, -182, 20), new V3(-58, -222, 6), new V3(-46, -236, 0)], false, 'centripetal');
   const flange = G.lathe([[0, 0], [16, 0], [16, 3], [0, 3]], 24); flange.translate(-96, -112, 32);
   out.fixed.push(solid(G.merge([new THREE.TubeGeometry(pc, 48, 7, 14, false), flange]), M.pickup, 'pickup'));
@@ -80,7 +71,6 @@ BUILD_B4.aux = function (ctx) {
   const mesh = G.lathe([[0, 0], [39.5, 0], [39.5, 0.6], [0, 0.6]], 56, 0, undefined, true); mesh.translate(-46, -249.2, 0);
   out.fixed.push(solid(G.merge([strainer, mesh]), M.strainer, 'pickup'));
 
-  /* ---------- поз. 21 oil filter (vertical, under the right half) + поз. 8 pressure sensor ---------- */
   const fTop = new V3(-108, -85, -200), down = new V3(0, -1, 0);
   const can = G.lathe([[0, 10], [31, 10], [34, 12.5], [34, 80], [32.5, 86], [21, 90], [0, 91]], 56);
   const flutes = Array.from({ length: 12 }, (_, k) => { const a = k / 12 * Math.PI * 2, b = new THREE.BoxGeometry(5, 7, 5); b.translate(21 * Math.cos(a), 90.5, 21 * Math.sin(a)); return b; });
@@ -94,11 +84,10 @@ BUILD_B4.aux = function (ctx) {
   ]);
   out.fixed.push(solid(along(sensor, new V3(-108, -85, -146), down), M.sensor, 'sensor'));
 
-  /* ---------- поз. 7 engine mounts: bracket off the block side, double rubber cushion, base ---------- */
   const mountParts = [], rubber = [];
   for (const zs of [-1, 1]) {
     const x = 20, z = zs * 167;
-    const hanger = new THREE.BoxGeometry(56, 34, 52); hanger.translate(x, -102, z); mountParts.push(hanger);       // bolted under the barrel
+    const hanger = new THREE.BoxGeometry(56, 34, 52); hanger.translate(x, -102, z); mountParts.push(hanger);
     const rib = new THREE.BoxGeometry(8, 30, 70); rib.translate(x, -100, zs * 132); mountParts.push(rib);
     const plate = new THREE.BoxGeometry(64, 5, 64); plate.translate(x, -121.5, z); mountParts.push(plate);
     const base = new THREE.BoxGeometry(72, 6, 72); base.translate(x, -181, z); mountParts.push(base);
@@ -108,7 +97,6 @@ BUILD_B4.aux = function (ctx) {
   }
   out.fixed.push(solid(G.merge(mountParts), M.mount, 'mount'), solid(G.merge(rubber), M.mountRubber, 'mount'));
 
-  /* ---------- spark plugs: electrode at the roof centre, boot up the well and out of the cover ---------- */
   const metal = [], ceramic = [], boots = [];
   for (let c = 0; c < 4; c++) {
     const q = BUILD_B4.bankQuat(E, c, E.plugAngle), tip = BUILD_B4.local(E, c, 0, E.plugTip[0], E.plugTip[1]);

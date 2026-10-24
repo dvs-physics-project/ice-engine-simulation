@@ -1,13 +1,8 @@
-/* v8/build-pistons.js — 8 bowl-in-crown diesel pistons (поз. 5) with rings (поз. 37), floating
-   pins (поз. 25) and valve pockets; 8 rods (поз. 4) paired side by side on the 4 pins, with
-   big-end shells (поз. 35); 8 wet liners (поз. 24). Parts are built in the bank-local frame
-   (x along the crank, y along the cylinder axis, z toward the vee); left-bank copies are the
-   same geometry turned 180° about the cylinder axis — exactly how identical heads mount. */
 (function () {
 'use strict';
 window.BUILD_V8 = window.BUILD_V8 || {};
 
-BUILD_V8.bankQuat = function (E, c, extraX) {          // local frame → world for cylinder c
+BUILD_V8.bankQuat = function (E, c, extraX) {
   const C = E.cyl[c];
   const m = new THREE.Matrix4().makeRotationX(C.beta);
   if (C.sgn < 0) m.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
@@ -17,28 +12,23 @@ BUILD_V8.bankQuat = function (E, c, extraX) {          // local frame → world 
 
 function pistonGeometries(E) {
   const R = E.pistonR, g = {};
-  // body: ω-bowl in the crown, three ring grooves, full skirt, hollow underside
   const bowl = [[0, -10], [4, -11.5], [10, -16], [17, -21.5], [24, -23], [30, -21], [34.5, -15.5], [37, -8], [39, -2.5], [41.5, 0]];
   const belt = [[R - 0.8, 0], [R, -0.8], [R, -11], [58.2, -11], [58.2, -14], [R, -14], [R, -21], [58.2, -21], [58.2, -24], [R, -24],
     [R, -31], [58.2, -31], [58.2, -37], [R, -37], [R, -138], [R - 1.2, -E.pistonH], [57, -E.pistonH], [57, -62], [46, -52], [34, -44], [0, -44]];
   g.body = G.lathe(bowl.concat(belt), 56, 0, undefined, true);
-  // pin bosses + struts
   const parts = [];
   for (const s of [-1, 1]) {
     const boss = G.cylX(31, s < 0 ? -57 : 21, s < 0 ? -21 : 57, 32); boss.translate(0, -E.compH, 0); parts.push(boss);
     const strut = new THREE.BoxGeometry(30, 40, 26); strut.translate(s * 39, -64, 0); parts.push(strut);
   }
   g.bosses = G.merge(parts);
-  // rings
   const ringAt = (y0, y1, gap) => G.lathe([[58.4, y0], [R + 0.15, y0], [R + 0.15, y1], [58.4, y1], [58.4, y0]], 56, gap, Math.PI * 2 - 2 * gap, true);
   g.rings = G.merge([ringAt(-13.8, -11.2, 0.01), ringAt(-23.8, -21.2, 0.01), ringAt(-36.8, -31.2, 0.006)]);
-  // floating pin + circlips
   const pin = G.lathe([[E.pinID / 2, 0], [E.pinOD / 2, 0], [E.pinOD / 2, 104], [E.pinID / 2, 104], [E.pinID / 2, 0]], 36, 0, undefined, true);
   G.toX(pin); pin.translate(-52, -E.compH, 0);
   const clipL = new THREE.TorusGeometry(22.5, 1.2, 6, 32); clipL.rotateY(Math.PI / 2); clipL.translate(-52.6, -E.compH, 0);
   const clipR = clipL.clone(); clipR.translate(105.2, 0, 0);
   g.pin = G.merge([pin, clipL, clipR]);
-  // valve pockets: the part of each pocket outside the bowl lip, as a dark floor + rim strip
   const fill = [], rim = [];
   for (const [dx, rr] of [[-E.valveDX, E.valveHeadR.in + 2], [E.valveDX, E.valveHeadR.ex + 2]]) {
     const cz = E.valveS, N = 96;
@@ -51,7 +41,6 @@ function pistonGeometries(E) {
         const v = p => [p[0], 0.08, p[1]];
         rim.push(...v(q0), ...v(p0), ...v(p1), ...v(q0), ...v(p1), ...v(q1));
       }
-      // floor: fan from the pocket centre, clipped to the crown annulus (coarse polygon test)
       for (let j = 0; j < 6; j++) {
         const r0 = (rr - 1.6) * j / 6, r1 = (rr - 1.6) * (j + 1) / 6;
         const a = P(r0, a0), b = P(r1, a0), c = P(r1, a1), d = P(r0, a1);
@@ -64,7 +53,6 @@ function pistonGeometries(E) {
   return g;
 }
 
-/* rod in its own frame: origin = big-end centre, +Y toward the small end, X = crank axis */
 function rodGeometries(E) {
   const L = E.rodLen, rb = E.rodBig / 2, g = {};
   const key = [[42, 48], [58, 30], [78, 23], [110, 20], [170, 17.5], [212, 16]];
@@ -95,7 +83,7 @@ function rodGeometries(E) {
   parts.push(G.extrudeX(G.shapeFromPts(be), -E.rodW / 2, E.rodW / 2, { bevelEnabled: true, bevelThickness: 1, bevelSize: 0.8, bevelSegments: 1, curveSegments: 12 }));
   const eye = new THREE.Shape(); eye.absarc(L, 0, eyeR, 0, Math.PI * 2, false); eye.holes.push(G.circlePath(L, 0, 27.5, true));
   parts.push(G.extrudeX(eye, -17, 17, { bevelEnabled: true, bevelThickness: 1, bevelSize: 0.7, bevelSegments: 1, curveSegments: 40 }));
-  for (const s of [-1, 1]) {                                   // I-beam flanges
+  for (const s of [-1, 1]) {
     const pts = [];
     for (let x = 46; x <= 214; x += 4) pts.push([x, s * w(x)]);
     for (let x = 214; x >= 46; x -= 4) pts.push([x, s * (w(x) - 5.5)]);
@@ -136,7 +124,6 @@ BUILD_V8.pistons = function (ctx) {
   const pg = pistonGeometries(E), rg = rodGeometries(E), lg = linerGeometries(E);
   const pocketMat = new THREE.MeshStandardMaterial({ color: MM.srgb('#57534c'), metalness: 0.5, roughness: 0.7, side: THREE.DoubleSide });
   const rimMat = new THREE.MeshBasicMaterial({ color: 0x2a2826, side: THREE.DoubleSide });
-  // liners: translucent so the pistons inside stay visible
   for (const k of ['liner', 'linerBore']) { M[k].transparent = true; M[k].depthWrite = false; M[k].opacity = k === 'liner' ? 0.2 : 0.14; }
   const pistons = [], rods = [], liners = [];
   for (let c = 0; c < 8; c++) {

@@ -1,13 +1,3 @@
-/* b4/build-valvetrain.js — SOHC, one camshaft per head on the cylinder axis line: camshafts with
-   8 lobes each (every lobe is the envelope of its rocker's pad line, spec.js), cam pulleys (44
-   teeth, timing marks), 16 rockers with adjusting screws on two shafts per head, the shaft
-   holders that double as cam bearing caps, 16 valves, springs, retainers, guides and seats; the
-   heads' ports as ghost tubes that are also the gas-flow paths.
-   Kinematics: cam angle κθ → rocker angle φ = law(cam angle from the lobe's peak) → valve lift
-   from the rocker lever. The lobe is cut so the pad touches it at exactly that φ, every degree.
-   Rocker frame: origin on the rocker shaft axis at the valve's x, (y, z) = (a − shaft.a,
-   s − shaft.s); a rocker turns by sg·φ about x. Rockers stay clear of both lobes they pass
-   (pad web clipped to its own pad line, hubs outside the lobes' reach), checked in tests. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
@@ -25,7 +15,6 @@ function hull(pts) {
 BUILD_B4.hull = hull;
 const circle = (c, r, n) => Array.from({ length: n }, (_, k) => [c[0] + r * Math.cos(k / n * Math.PI * 2), c[1] + r * Math.sin(k / n * Math.PI * 2)]);
 
-// range of the contact point along the pad, measured from the pad's reference point C(φ)
 BUILD_B4.padContactRange = function (E, side) {
   const V = E.vt[side]; let lo = Infinity, hi = -Infinity;
   for (let k = 0; k < 720; k++) {
@@ -39,7 +28,6 @@ BUILD_B4.padContactRange = function (E, side) {
 };
 
 const HUB_R = 11.5, BORE_R = 8.2, PAD_DEPTH = 5.5;
-// rocker cross-sections in its own (y, z) plane, relative to the shaft axis
 BUILD_B4.rockerSections = function (E, side) {
   const V = E.vt[side], P = [V.shaft.a, V.shaft.s];
   const [lo, hi] = BUILD_B4.padContactRange(E, side), tA = lo - 1.6, tB = hi + 1.6;
@@ -64,9 +52,8 @@ BUILD_B4.valvetrain = function (ctx) {
   const E = ctx.E, MM = ctx.M, M = MM.mat;
   const out = { cams: [], instanced: [], static: [], ports: { in: [], ex: [] }, portMesh: null };
   const bankCyl = { R: [0, 2], L: [1, 3] }, headPart = b => b === 'R' ? 'headR' : 'headL';
-  const toYZ = (b, a, s) => [s, b === 'R' ? -a : a];            // bank (a, s) → world (Y, Z) offsets
+  const toYZ = (b, a, s) => [s, b === 'R' ? -a : a];
 
-  /* ---------------- camshafts + pulleys (one group per bank, turning κθ about X) ---------------- */
   const Rk = E.pd(E.z.cam) / 2, bx = E.beltX;
   const profiles = { in: E.lobeProfile('in', 240), ex: E.lobeProfile('ex', 240) };
   for (const b of ['R', 'L']) {
@@ -76,19 +63,17 @@ BUILD_B4.valvetrain = function (ctx) {
     const polish = [];
     const J = E.camJournals[b];
     J.forEach(x => polish.push(G.cylX(E.camJournalR, x - 9, x + 9, 44)));
-    core.push(G.cylX(19, J[0] - 12.5, J[0] - 9.5, 40));            // thrust flange behind the front journal
+    core.push(G.cylX(19, J[0] - 12.5, J[0] - 9.5, 40));
     core.push(G.cylX(13, E.camEnd[b] - 2, E.camEnd[b] + 3, 32));
     for (const c of bankCyl[b]) for (const side of ['in', 'ex']) for (let j = 0; j < 2; j++) {
       const C = E.cyl[c], lx = E.lobeLocalX(side, j), x = C.x + (C.sgn > 0 ? lx : -lx);
       const shape = G.shapeFromPts(profiles[side].map(([a, s]) => toYZ(b, a, s)));
-      // no bevel: a bevel would make the lobe taller than its own law
       const geo = G.extrudeX(shape, x - E.lobeW / 2, x + E.lobeW / 2, { curveSegments: 1 });
       geo.rotateX(-E.kappa * E.thetaPeak(c, side));
       polish.push(geo);
     }
     const shaft = new THREE.Mesh(G.merge(core), M.camshaft), lobes = new THREE.Mesh(G.merge(polish), M.camLobe);
     [shaft, lobes].forEach(m => { ctx.tag(m, 'camshaft', 'valvetrain'); m.castShadow = m.receiveShadow = true; grp.add(m); });
-    // cam pulley: 44 grooves phased to the belt, six lightening holes, flanges, bolt, mark at 12 o'clock
     const holes = [G.circlePath(0, 0, 15, true)];
     for (let k = 0; k < 6; k++) { const a = (k + 0.5) / 6 * Math.PI * 2; holes.push(G.circlePath(40 * Math.cos(a), 40 * Math.sin(a), 10.5, true)); }
     const pulley = new THREE.Mesh(G.merge([
@@ -106,7 +91,6 @@ BUILD_B4.valvetrain = function (ctx) {
     out.cams.push(grp);
   }
 
-  /* ---------------- valves, springs, retainers (instanced, local frames: +Y along the valve) ---------------- */
   const valveGeo = side => {
     const V = E.vt[side], R = V.headR, Lv = V.len, st = E.stemR;
     const pts = [[0, 0], [R - 0.5, 0], [R, 0.6], [R, 1.7], [R - 2.8, 4.5]];
@@ -129,7 +113,6 @@ BUILD_B4.valvetrain = function (ctx) {
   const retainers = mkInst(retainerGeo, M.retainer, 'springs', 16);
   const keepers = mkInst(keeperGeo, M.adjScrew, 'springs', 16);
 
-  /* ---------------- rockers: body per (side, j), screws per side ---------------- */
   const rockers = { in: [], ex: [] }, screws = {};
   for (const side of ['in', 'ex']) {
     const sec = BUILD_B4.rockerSections(E, side), d = E.lobeLocalX(side, 1) - E.valveLocalX(side, 1);
@@ -138,8 +121,6 @@ BUILD_B4.valvetrain = function (ctx) {
     const ang = Math.atan2(sec.u[1], sec.u[0]);
     for (let j = 0; j < 2; j++) {
       const xs = j ? 1 : -1, rng = (a, b) => xs > 0 ? [a, b] : [-b, -a];
-      // x slabs (rocker frame, j = 1; mirrored for j = 0): the intake pad keeps 1 mm off the exhaust
-      // rocker's hub, which shares its x range near the valve
       const [p0, p1] = d > 0 ? rng(d - 3.5, d + 5.5) : rng(d - 5, d + 5);
       const [h0, h1] = d > 0 ? rng(-5, d - 3.5) : rng(d + 5, 4.5), [v0, v1] = d > 0 ? rng(-5, 5) : rng(-5, 4.5);
       const parts = [
@@ -151,16 +132,14 @@ BUILD_B4.valvetrain = function (ctx) {
       ];
       rockers[side].push(mkInst(G.merge(parts), M.rocker, 'rocker', 4));
     }
-    // adjusting screw with ball end and lock nut, on the valve's x
     const sc = [new THREE.SphereGeometry(4.2, 16, 10), (() => { const g = new THREE.CylinderGeometry(4, 4, 24, 16); g.translate(0, 12, 0); return g; })(),
       (() => { const g = G.hexPrism(11, 5); g.translate(0, 15.4, 0); return g; })()];
     const screw = G.merge(sc); screw.rotateX(ang); screw.translate(0, sec.ball[0], sec.ball[1]);
     screws[side] = mkInst(screw, M.adjScrew, 'rocker', 8);
   }
 
-  /* ---------------- static: rocker shafts, shaft holders / cam caps, guides, seats, seals ---------------- */
   const sv = E.vt.in.shaft, se = E.vt.ex.shaft;
-  const holder = (() => {                 // bank (a, s) profile: round the cam journal and both shafts
+  const holder = (() => {
     const pts = hull(circle([E.camA, E.camS], 21, 40).concat(circle([sv.a, sv.s], 13, 32), circle([se.a, se.s], 13, 32), [[296, -30], [296, 30]]));
     return pts;
   })();
@@ -205,7 +184,6 @@ BUILD_B4.valvetrain = function (ctx) {
   for (const b of ['R', 'L']) { addStatic(G.merge(guideG[b]), MM.hw.steel, headPart(b)); addStatic(G.merge(sealG[b]), rubber, headPart(b)); }
   addStatic(G.merge(seatG), M.retainer, 'springs');
 
-  /* ---------------- ports: ghost tubes + per-valve flow curves (bank-local control points) ---------------- */
   const portGeos = { R: [], L: [] };
   const curveOf = (c, pts) => new THREE.CatmullRomCurve3(pts.map(([lx, a, s]) => BUILD_B4.local(E, c, lx, a, s)), false, 'centripetal');
   const I = E.vt.in, X = E.vt.ex;
@@ -221,7 +199,6 @@ BUILD_B4.valvetrain = function (ctx) {
       portGeos[b].push(new THREE.TubeGeometry(curveOf(c, inPts.slice(1)), 28, j ? 12 : 12.2, 12, false));
       portGeos[b].push(new THREE.TubeGeometry(curveOf(c, exPts.slice(0, 5)), 28, 10.5, 12, false));
     }
-    // siamesed entry of the intake port, and the exhaust exit
     portGeos[b].push(new THREE.TubeGeometry(curveOf(c, [[0, 287, 88], [0, 286, 74], [0, 280, 60]]), 8, 17, 16, false));
     portGeos[b].push(new THREE.TubeGeometry(curveOf(c, [[0, 265, -70], [0, 266, -84], [0, 266, -97]]), 8, 15, 16, false));
   }
@@ -231,10 +208,9 @@ BUILD_B4.valvetrain = function (ctx) {
 
   out.rockerMeshes = rockers; out.valveMeshes = valves;
 
-  /* ---------------- update ---------------- */
   const m4 = new THREE.Matrix4(), pos = new V3(), one = new V3(1, 1, 1), scl = new V3(1, 1, 1);
   const qx = new THREE.Quaternion(), qq = new THREE.Quaternion(), AX = new V3(1, 0, 0);
-  out.lifts = new Float32Array(16);           // [0..7] intake, [8..15] exhaust; index c·2 + j
+  out.lifts = new Float32Array(16);
   out.phi = new Float32Array(16);
   out.update = function (theta) {
     out.cams.forEach(g => { g.rotation.x = E.kappa * theta; });

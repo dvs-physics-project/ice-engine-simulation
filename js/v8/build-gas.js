@@ -1,9 +1,3 @@
-/* v8/build-gas.js — the working gas of the diesel: each cylinder's charge between the crown and
-   the fire face plus the part trapped in the ω-bowl (colour = temperature, density = pressure);
-   the four fuel sprays from the nozzle while the pump delivers; the flame that follows; and flow
-   particles in the ports (moving only while — and as fast as — the real valve lift allows), the
-   manifolds and the turbochargers. Particles advance with Δθ, so scrubbing backwards reverses
-   them. */
 (function () {
 'use strict';
 window.BUILD_V8 = window.BUILD_V8 || {};
@@ -31,7 +25,6 @@ BUILD_V8.gas = function (ctx, vt, fuel, air) {
   const E = ctx.E;
   const out = { chambers: [], objects: [] };
 
-  /* ---------- chambers: slab (crown → fire face) + bowl charge, in the bank frame ---------- */
   const slabGeo = new THREE.CylinderGeometry(E.pistonR - 0.3, E.pistonR - 0.3, 1, 56, 1, false); slabGeo.translate(0, 0.5, 0);
   const bowl = [[0, -9.4], [4, -10.9], [10, -15.4], [17, -20.9], [24, -22.4], [30, -20.4], [34.2, -15], [36.5, -7.6], [38.4, -2.2], [40.8, 0.25], [0, 0.25]];
   const bowlGeo = G.lathe(bowl, 40);
@@ -47,13 +40,10 @@ BUILD_V8.gas = function (ctx, vt, fuel, air) {
     slab.renderOrder = bw.renderOrder = 4;
     ctx.tag(slab, 'gas:' + c, 'gas'); ctx.tag(bw, 'gas:' + c, 'gas');
     frame.add(slab, bw);
-    // flame kernel in the bowl
-    // the burn happens inside the bowl, behind the crown rim from most angles: drawn on top
     const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
     flame.renderOrder = 6; flame.userData.pickable = false; ctx.tag(flame, 'gas:' + c, 'gas');
     frame.add(flame);
     out.objects.push(frame);
-    // sprays: four holes 72° off the nozzle axis, aimed down into the bowl
     const tip = fuel.tips[c], ax = fuel.injAxis[c], u = new V3(1, 0, 0), v = new V3().crossVectors(ax, u).normalize();
     const sprayMat = new THREE.MeshBasicMaterial({ color: 0xffe7a0, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
     const sprays = [];
@@ -70,7 +60,6 @@ BUILD_V8.gas = function (ctx, vt, fuel, air) {
   out.flash = new THREE.PointLight(0xffb066, 0, 420, 2);
   out.objects.push(out.flash);
 
-  /* ---------- flow particles ---------- */
   const parts = [];
   const rnd = s => (Math.random() - 0.5) * s;
   for (let c = 0; c < 8; c++) {
@@ -118,7 +107,6 @@ BUILD_V8.gas = function (ctx, vt, fuel, air) {
       ch.mat.color.setRGB(col[0], col[1], col[2]).convertSRGBToLinear();
       ch.mat.opacity = 0.16 + 0.5 * Math.max(0, Math.min(1, (Math.log10(st.P) - lo) / (hi - lo)));
       ch.state = st;
-      // fuel sprays during delivery (lengthen over ~8°, then collapse when the needle shuts)
       const ph = st.phase, i0 = E.inject.start, i1 = E.inject.end;
       let len = 0, op = 0;
       if (ph >= i0 && ph <= i1 + 6) {
@@ -127,7 +115,6 @@ BUILD_V8.gas = function (ctx, vt, fuel, air) {
       }
       ch.sprayMat.opacity = op;
       ch.sprays.forEach(m => { m.scale.set(len * 0.11 + 0.01, len + 0.01, len * 0.11 + 0.01); m.visible = op > 0.01; });
-      // flame: ignition a few degrees after the start of injection, burns into the expansion
       const f = ph - (i0 + 6), dur = 90;
       const fl = f >= 0 && f < dur ? Math.sin(Math.PI * Math.min(1, f / dur)) * (1 - f / (dur * 1.25)) : 0;
       ch.flame.material.opacity = Math.max(0, fl);
@@ -137,7 +124,6 @@ BUILD_V8.gas = function (ctx, vt, fuel, air) {
     }
     out.flash.intensity = flashI * 3.2;
     if (flashC >= 0) out.chambers[flashC].flame.getWorldPosition(out.flash.position);
-    // particles
     const L = vt.lifts, bankIn = [0, 0], bankEx = [0, 0];
     for (let c = 0; c < 8; c++) { const b = c < 4 ? 0 : 1; bankIn[b] += L[c] / E.valveLiftMax / 4; bankEx[b] += L[8 + c] / E.valveLiftMax / 4; }
     for (let j = 0; j < parts.length; j++) {

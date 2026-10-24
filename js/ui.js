@@ -68,7 +68,6 @@ const PROFILES = {
     rpm: { min: 600, max: 2600, step: 50, def: 1400 }, slow: [60, 30, 10], slowDef: 30,
     nCyl: 8, compact: true,
     views: [['iso', 'Общий'], ['front', 'Спереди'], ['gears', 'Шестерни'], ['side', 'Сбоку'], ['top', 'Сверху']],
-    // the rear gear train sits behind the flywheel: that view takes the flywheel off
     onView: (v, api) => { if (v === 'gears') api.setLayer('flywheel', false); },
     housing: [['ghost', 'Прозрачный корпус'], ['long', 'Разрез А–А'], ['trans', 'Разрез Б–Б'], ['off', 'Без корпуса']],
     layers: [['crank', 'Коленвал, вкладыши'], ['flywheel', 'Маховик'], ['pistons', 'Поршни, шатуны, гильзы'], ['valvetrain', 'Распредвал, клапаны'],
@@ -86,9 +85,9 @@ const PROFILES = {
     silhouette: { x: [-611, 640], y: [-377, 620], z: [-430, 430], c: [0, 150, 0] },
     footer: 'Размеры сняты с чертежа ДВС КР 09.00.00.00 СБ. На чертеже нет таблицы спецификации, поэтому нумерация позиций — своя. Кинематика точная: профиль кулачков задаёт подъём толкателей, угол коромысла — из постоянной длины штанги, все шестерни в зацеплении, ремни на точной касательной. Термодинамика — упрощённый смешанный цикл дизеля.',
     callouts(E, EN) {
-      const cyl = (s, k) => (s > 0 ? 4 : 0) + k;                        // the bank nearer the viewer
+      const cyl = (s, k) => (s > 0 ? 4 : 0) + k;
       const L = (k, lx, a, sv) => s => BUILD_V8.local(E, cyl(s, k), lx, a, sv);
-      const local = (objFn, x, y, z) => s => new V3(x, y, z).applyMatrix4(objFn(s).matrixWorld);   // bank frames don't mirror
+      const local = (objFn, x, y, z) => s => new V3(x, y, z).applyMatrix4(objFn(s).matrixWorld);
       const lift = (s, k, side) => EN.vt.lifts[(side === 'in' ? 0 : 8) + cyl(s, k)];
       const camL = (s, k) => EN.vt.camLifts[cyl(s, k)];
       const run = EN.aux.beltPath.pieces[EN.aux.beltPath.pieces.length - 1];
@@ -143,7 +142,7 @@ const PROFILES = {
     silhouette: { x: [-212, 300], y: [-262, 218], z: [-390, 390], c: [-10, -20, 0] },
     footer: 'Размеры сняты с четырёх листов сборочного чертежа (М 1:1): вид А на привод ГРМ, поперечный и продольный разрезы, вид Б на головку. Спецификации на чертеже нет: номера взяты с выносок, названия деталей — по их виду и месту. Кинематика точная: каждый кулачок построен как огибающая площадки своего коромысла, ремень — ровно 201 зуб на касательных. Термодинамика — упрощённый цикл Отто.',
     callouts(E, EN) {
-      const near = (s, r, l) => (s > 0 ? l : r);                       // the bank nearer the viewer
+      const near = (s, r, l) => (s > 0 ? l : r);
       const pul = k => EN.sol.pulleys.find(p => p.key === k);
       const run = EN.sol.path.pieces.find(pc => pc.type === 'seg' && pc.k === 0);
       const beltPt = new V3(E.beltX - 13, run.p1.u + run.du * run.len * 0.5, run.p1.v + run.dv * run.len * 0.5);
@@ -166,8 +165,7 @@ const PROFILES = {
   },
 };
 
-/* ================================================================ controller ==== */
-function mount(key, root) {                    // the sheet layout, filled with this engine's labels
+function mount(key, root) {
   const P = PROFILES[key], E = P.E();
   root.appendChild(document.getElementById('engineTpl').content.cloneNode(true));
   const $ = r => root.querySelector(`[data-role="${r}"]`);
@@ -182,7 +180,6 @@ function createController(key, root, saved, shell) {
   const P = PROFILES[key], E = P.E(), M = P.M();
   const $ = r => root.querySelector(`[data-role="${r}"]`);
   const stage = $('stage'), viewport = $('viewport');
-  // per-engine ids for the label ↔ control pairs
   $('angle').id = key + '-angle'; $('angleLabel').htmlFor = key + '-angle';
   $('rpm').id = key + '-rpm'; $('rpmLabel').htmlFor = key + '-rpm';
   const rpmIn = $('rpm');
@@ -293,10 +290,9 @@ function createController(key, root, saved, shell) {
     });
   }
 
-  /* ---------------- selection + part card ---------------- */
   const card = $('partCard');
   function select(id, fromTable) {
-    if (id && fromTable) {                          // make sure what was picked in the table can be seen
+    if (id && fromTable) {
       const p = M.parts[id];
       if (EN.layerOn[p.layer] === false) api.setLayer(p.layer, true);
       if (p.layer === 'housing' && EN.housingMode === 'off') { EN.setHousing('ghost'); st.housing = 'ghost'; setHousingBtn('ghost'); }
@@ -318,7 +314,7 @@ function createController(key, root, saved, shell) {
     if (row && !fromTable) row.scrollIntoView({ block: 'nearest' });
   }
   const transportBar = $('transport');
-  function placeCard() {                       // float just above the transport bar, whatever it wraps to
+  function placeCard() {
     const sr = stage.getBoundingClientRect(), tr = transportBar.getBoundingClientRect();
     card.style.bottom = Math.max(12, sr.bottom - tr.top + 12) + 'px';
   }
@@ -433,7 +429,6 @@ function createController(key, root, saved, shell) {
         c.g.classList.toggle('on', EN.selected === c.part);
       });
     };
-    // columns hug the engine's own silhouette (like callouts on a drawing), inside the frame
     let minX = Infinity, maxX = -Infinity;
     for (const x of S.x) for (const y of S.y) for (const z of S.z) {
       tmp.set(x, y, z).project(EN.camera);
@@ -547,7 +542,6 @@ function start(saved) {
     if (key === 'menu') return;
     if (ctl[key]) { ctl[key].resume(); return; }
     if (building[key]) return;
-    // mount the sheet first so «Собираю двигатель…» is painted, then build the 3D model
     building[key] = true;
     mount(key, panels[key]);
     requestAnimationFrame(() => setTimeout(() => {
@@ -559,7 +553,6 @@ function start(saved) {
     }, 30));
   }
   document.querySelectorAll('[data-tab]').forEach(el => el.addEventListener('click', () => show(el.dataset.tab)));
-  // arrow keys move between the tabs
   document.querySelector('.tabs').addEventListener('keydown', ev => {
     if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
     const list = [...tabs], i = list.indexOf(document.activeElement); if (i < 0) return;

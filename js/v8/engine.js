@@ -1,7 +1,3 @@
-/* v8/engine.js — assembles the V8 part modules into one scene and owns its per-frame update.
-   Exposes window.ENGINE_V8 with the same interface as ENGINE_I4, so the page controller can
-   drive either engine. Depends on THREE r128 (+ OrbitControls, RoomEnvironment,
-   BufferGeometryUtils), v8/spec.js (ENG_V8), geom.js (G), v8/materials.js (MAT_V8), v8/build-*.js. */
 (function () {
 'use strict';
 const V3 = THREE.Vector3;
@@ -46,7 +42,6 @@ EN.init = function (viewport) {
   controls.minDistance = 260; controls.maxDistance = 6400;
   controls.screenSpacePanning = true;
 
-  /* ---------------- build ---------------- */
   const registry = { layer: {}, part: {} };
   const tag = (obj, part, layer) => {
     obj.userData.part = part; obj.userData.layer = layer;
@@ -83,11 +78,8 @@ EN.init = function (viewport) {
 
   Object.assign(EN, { renderer, scene, camera, controls, crank, pist, vt, tm, fuel, aux, air, hs, gas, registry });
 
-  /* ---------------- layers & housing modes ---------------- */
   EN.layerOn = { crank: true, flywheel: true, pistons: true, valvetrain: true, gears: true, fuel: true, air: true, aux: true, gas: true, housing: true };
   EN.housingMode = 'ghost';
-  // Б–Б cuts the castings at cylinder 1 and lifts off every part lying wholly on the viewer's
-  // side of that plane (fan, pulleys, belts, front gears…), so the section is in plain sight
   let cutSide = 0;
   const sideOf = o => {
     if (o.userData.cutSide !== undefined) return o.userData.cutSide;
@@ -113,8 +105,6 @@ EN.init = function (viewport) {
       });
     });
   };
-  // А–А: through the crank axis along the cylinder axes of the bank farther from the viewer
-  // (the nearer half is cut away); Б–Б: across the engine through cylinder 1's axis
   const X1 = E.cyl[0].x;
   const planes = { long: new THREE.Plane(new V3(0, -Math.SQRT1_2, -Math.SQRT1_2), 0), trans: new THREE.Plane(new V3(1, 0, 0), -X1) };
   EN.setHousing = function (mode) {
@@ -129,7 +119,7 @@ EN.init = function (viewport) {
   EN.setPalette = function (name) { M.applyPalette(name); EN.dirty = true; };
   const updateSectionSide = () => {
     if (EN.housingMode === 'long') {
-      const s = camera.position.z >= 0 ? 1 : -1;               // camera on the left-bank side → cut along the right bank
+      const s = camera.position.z >= 0 ? 1 : -1;
       planes.long.normal.set(0, -Math.SQRT1_2, -s * Math.SQRT1_2); planes.long.constant = 0;
     } else if (EN.housingMode === 'trans') {
       const s = camera.position.x <= X1 ? 1 : -1;
@@ -138,7 +128,6 @@ EN.init = function (viewport) {
     }
   };
 
-  /* ---------------- selection ---------------- */
   EN.selected = null; EN.isolated = null;
   EN.select = function (partId) {
     EN.selected = partId;
@@ -163,7 +152,6 @@ EN.init = function (viewport) {
     return box;
   };
 
-  /* ---------------- picking: solid parts win over the ghost housings in front of them ---------------- */
   const ray = new THREE.Raycaster();
   const isShown = o => { let p = o; while (p) { if (!p.visible) return false; p = p.parent; } return true; };
   EN.pick = function (ndcX, ndcY) {
@@ -177,7 +165,6 @@ EN.init = function (viewport) {
     return { part: h.object.userData.part, point: h.point };
   };
 
-  /* ---------------- camera: presets + focus tween ---------------- */
   const VIEWS = {
     iso:   { dir: [-0.35, 0.55, 0.76], tgt: [20, 120, 0], r: 660 },
     front: { dir: [-1, 0.1, 0.0001], tgt: [-470, 150, 0], r: 450 },
@@ -212,7 +199,6 @@ EN.init = function (viewport) {
 
   EN.setDark = function (dark) { M.setInk(dark); EN.dirty = true; };
 
-  /* ---------------- sizing ---------------- */
   EN.resize = function () {
     const w = viewport.clientWidth, h = viewport.clientHeight;
     if (!w || !h) return;
@@ -225,7 +211,6 @@ EN.init = function (viewport) {
   new ResizeObserver(EN.resize).observe(viewport);
   EN.resize();
 
-  /* ---------------- per-frame ---------------- */
   EN.theta = 0;
   EN.update = function (theta, dTheta) {
     EN.theta = theta; EN.dirty = true;

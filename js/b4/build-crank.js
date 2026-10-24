@@ -1,15 +1,7 @@
-/* b4/build-crank.js — поз. 1 crankshaft (5 mains, 4 throws, 8 webs with counterweights; seen
-   from the front the throws of cylinders 1 and 4 point at the right bank, 2 and 3 at the left),
-   поз. 10 crank sprocket (22 teeth, timing mark) and the nose bolt, the gerotor seat, поз. 6
-   flywheel Ø344 with the starter ring gear; static main shells split on the vertical joint of
-   the block halves, thrust half-rings at the centre main. Everything that turns with the crank
-   lives in one group rotated by θ about X. */
 (function () {
 'use strict';
 window.BUILD_B4 = window.BUILD_B4 || {};
 
-// local frame of cylinder c (x along the crank, y = a out along the bore, z = s up) → world.
-// The left bank is the right bank turned 180° about the vertical, so its local x runs to −X.
 BUILD_B4.bankQuat = function (E, c, extraX) {
   const C = E.cyl[c];
   const m = new THREE.Matrix4().makeRotationX(C.beta);
@@ -21,14 +13,12 @@ BUILD_B4.local = function (E, c, lx, a, s, target) {
   const C = E.cyl[c], p = E.bankPoint(c, C.x + (C.sgn > 0 ? lx : -lx), a, s);
   return (target || new THREE.Vector3()).set(p[0], p[1], p[2]);
 };
-// half bearing shell, split on the vertical plane of the block joint: side +1 → the Z > 0 half
 BUILD_B4.halfShellV = function (ri, ro, x0, x1, side) {
   const gap = 0.02, len = Math.PI - 2 * gap;
   const geo = G.lathe([[ri, 0], [ro, 0], [ro, x1 - x0], [ri, x1 - x0], [ri, 0]], 44, side > 0 ? -Math.PI / 2 + gap : Math.PI / 2 + gap, len, true);
   G.toX(geo); geo.translate(x0, 0, 0);
   return geo;
 };
-// half shell split across its own +Y axis (rod big ends)
 BUILD_B4.halfShell = function (ri, ro, x0, x1, upper) {
   const gap = 0.02, len = Math.PI - 2 * gap;
   const geo = G.lathe([[ri, 0], [ro, 0], [ro, x1 - x0], [ri, x1 - x0], [ri, 0]], 40, upper ? Math.PI + gap : gap, len, true);
@@ -37,7 +27,6 @@ BUILD_B4.halfShell = function (ri, ro, x0, x1, upper) {
 };
 BUILD_B4.markMat = () => new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff5a2a').convertSRGBToLinear() });
 
-// web: boss round the crank pin, waist at the main journal, counterweight opposite the pin
 function webShape(E) {
   const r = E.r, Rb = 31, Rcw = 64, half = 56 * Math.PI / 180, pts = [];
   for (let a = -80; a <= 80; a += 5) { const t = a * Math.PI / 180; pts.push([r + Rb * Math.cos(t), Rb * Math.sin(t)]); }
@@ -53,7 +42,6 @@ BUILD_B4.crank = function (ctx) {
   group.name = 'crankshaft';
   const forged = [], polished = [];
 
-  /* webs: each main journal runs straight into the web of its neighbouring throw */
   const ws = webShape(E), bev = 1.2;
   for (let k = 0; k < 4; k++) {
     const xp = E.pinX[k], th = E.pinAngle[k];
@@ -65,14 +53,12 @@ BUILD_B4.crank = function (ctx) {
       forged.push(geo);
     }
   }
-  /* journals */
   E.mainX.forEach(x => polished.push(G.cylX(E.mainD / 2, x - E.mainW / 2, x + E.mainW / 2, 56)));
   for (let k = 0; k < 4; k++) {
     const g = G.cylX(E.pinD / 2, E.pinX[k] - E.pinW / 2, E.pinX[k] + E.pinW / 2, 52);
     g.translate(0, E.r * Math.cos(E.pinAngle[k]), E.r * Math.sin(E.pinAngle[k]));
     polished.push(g);
   }
-  /* nose: seal land, gerotor seat, sprocket seat; tail: seal land + flywheel flange */
   const xf = E.mainX[0] - E.mainW / 2, xr = E.mainX[4] + E.mainW / 2;
   forged.push(G.cylX(22, -137, xf, 44));
   forged.push(G.cylX(20, -151, -137, 44));
@@ -83,7 +69,6 @@ BUILD_B4.crank = function (ctx) {
   const journals = new THREE.Mesh(G.merge(polished), M.crankJournal);
   [body, journals].forEach(m => { ctx.tag(m, 'crank', 'crank'); group.add(m); });
 
-  // oil holes in the journals (dark dots riding round with the crank)
   const holes = [];
   E.mainX.forEach(x => { const g = G.cylX(2.8, -0.4, 0.4, 12); g.rotateZ(Math.PI / 2); g.translate(x, E.mainD / 2, 0); holes.push(g); });
   for (let k = 0; k < 4; k++) {
@@ -95,7 +80,6 @@ BUILD_B4.crank = function (ctx) {
   const hm = new THREE.Mesh(G.merge(holes), new THREE.MeshBasicMaterial({ color: 0x0b0c0e }));
   ctx.tag(hm, 'crank', 'crank'); group.add(hm);
 
-  /* поз. 10 crank sprocket, 22 teeth, groove phase locked to the belt; mark at 12 o'clock */
   const Rc = E.pd(E.z.crank) / 2, bx = E.beltX;
   const sprocket = new THREE.Mesh(G.merge([
     G.extrudeX(G.timingPulleyShape(E.z.crank, Rc, { phase: ctx.belt.phase.crank, holes: [G.circlePath(0, 0, 17, true)] }), bx - 13, bx + 13, { curveSegments: 20 }),
@@ -103,7 +87,7 @@ BUILD_B4.crank = function (ctx) {
     G.tubeX(17, Rc + 4.5, bx + 13, bx + 14.6, 56),
   ]), M.crankSprocket);
   ctx.tag(sprocket, 'crankSprocket', 'timing'); group.add(sprocket);
-  const mark = new THREE.Mesh((() => { const s = new THREE.Shape(); s.moveTo(Rc + 4.2, -2.4); s.lineTo(Rc + 4.2, 2.4); s.lineTo(Rc - 1.5, 0); s.closePath();   // shape (x, y) = (Y, Z): 12 o'clock
+  const mark = new THREE.Mesh((() => { const s = new THREE.Shape(); s.moveTo(Rc + 4.2, -2.4); s.lineTo(Rc + 4.2, 2.4); s.lineTo(Rc - 1.5, 0); s.closePath();
     return G.extrudeX(s, bx - 15.1, bx - 14.5); })(), BUILD_B4.markMat());
   ctx.tag(mark, 'crankSprocket', 'timing'); group.add(mark);
   const bolt = new THREE.Mesh(G.merge([
@@ -112,7 +96,6 @@ BUILD_B4.crank = function (ctx) {
   ]), M.noseBolt);
   ctx.tag(bolt, 'crank', 'crank'); group.add(bolt);
 
-  /* поз. 6 flywheel: hub on the flange, thin web, heavy rim, clutch face, ring gear, bolts */
   const fx = E.flywheelX, R6 = 168;
   const fw = G.lathe([[22, 0], [70, 0], [74, 4], [140, 4], [146, 0], [R6 - 4, 0], [R6, 4], [R6, 28], [R6 - 3, 30],
     [92, 30], [88, 26], [70, 26], [66, 22], [22, 22], [22, 0]], 112, 0, undefined, true);
@@ -129,7 +112,6 @@ BUILD_B4.crank = function (ctx) {
 
   group.traverse(o => { if (o.isMesh && !(o.material && o.material.isMeshBasicMaterial)) { o.castShadow = true; o.receiveShadow = true; } });
 
-  /* static: main shells (split on the block joint), thrust half-rings at the centre main */
   const fixed = new THREE.Group();
   const shells = [];
   E.mainX.forEach(x => {
