@@ -1,8 +1,4 @@
-/* ui.js — the page: main menu with the three engine tabs, and one controller per engine (built
-   lazily the first time its tab opens). A controller owns its own copy of the drawing-sheet
-   layout: animation loop, transport (play / step / scrub the crank angle), readouts and charts,
-   the specification table ↔ 3D selection, hover/click picking and the leader callouts (выноски).
-   Engine-specific numbers, labels and anchor points live in PROFILES. */
+
 (function () {
 'use strict';
 const V3 = THREE.Vector3;
